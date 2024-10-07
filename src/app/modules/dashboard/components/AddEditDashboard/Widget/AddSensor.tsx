@@ -9,13 +9,13 @@ import { KTIcon, toAbsoluteUrl } from "../../../../../../_metronic/helpers";
 import { getThingList } from "../../../../things/api/ThingAPI";
 
 interface IAddWidgetProps {
-  selectedWidget: any;
+  selectedLayout: any;
   onCloseAddSensor: () => void;
   isActivated: any;
   onGetPreviewWidgetList: (data: any) => void;
 }
 
-const AddSensor = ({ selectedWidget, onCloseAddSensor, onGetPreviewWidgetList, isActivated }: IAddWidgetProps) => {
+const AddSensor = ({ selectedLayout, onCloseAddSensor, onGetPreviewWidgetList, isActivated }: IAddWidgetProps) => {
   let ktThemeModeValue = localStorage.getItem("kt_theme_mode_value");
   if (ktThemeModeValue === "system") {
     ktThemeModeValue = ThemeModeComponent.getSystemMode() as "light" | "dark";
@@ -54,7 +54,7 @@ const AddSensor = ({ selectedWidget, onCloseAddSensor, onGetPreviewWidgetList, i
       description: "",
       sensorType: [],
       devices: [],
-      layout: selectedWidget?.name,
+      layout: selectedLayout?.name,
     },
     validationSchema: widgetSchema,
     onSubmit: async (values) => {
@@ -190,10 +190,10 @@ const AddSensor = ({ selectedWidget, onCloseAddSensor, onGetPreviewWidgetList, i
                   <div className="row">
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
-                        <label className="fw-bold fs-6 mb-2">Layout: {selectedWidget?.name}</label>
+                        <label className="fw-bold fs-6 mb-2">Layout: {selectedLayout?.name}</label>
                         <div className="overlay me-7">
                           <div className="overlay-wrapper">
-                            <img alt="img" className="rounded w-200px" src={toAbsoluteUrl(selectedWidget?.imageUrl)} />
+                            <img alt="img" className="rounded w-200px" src={toAbsoluteUrl(selectedLayout?.imageUrl)} />
                           </div>
                         </div>
                       </div>

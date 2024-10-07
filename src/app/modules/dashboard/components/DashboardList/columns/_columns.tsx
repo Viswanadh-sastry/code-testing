@@ -19,19 +19,6 @@ const dashboardColumns: ReadonlyArray<Column<Dashboard>> = [
     Cell: ({ value }) => convertGMTToLocalDateTime(value),
   },
   {
-    Header: (props) => <DashboardCustomHeader tableProps={props} title="Status" className="min-w-50px" />,
-    accessor: "status",
-    Cell: ({ ...props }) => (
-      <>
-        {props.data[props.row.index].status === "enabled" ? (
-          <div className="badge badge-light-success fw-bolder">enabled</div>
-        ) : (
-          <div className="badge badge-light-danger fw-bolder">disabled</div>
-        )}
-      </>
-    ),
-  },
-  {
     Header: (props) => <DashboardCustomHeader tableProps={props} title="Actions" className="text-end min-w-100px" />,
     id: "actions",
     Cell: ({ ...props }) => <DashboardActionsCell id={props.data[props.row.index].id} />,

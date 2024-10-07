@@ -1,84 +1,45 @@
-import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useFormik } from "formik";
-import { Typeahead } from "react-bootstrap-typeahead";
-import { toast } from "react-toastify";
 import * as Yup from "yup";
-import { ThemeModeComponent } from "../../../../../../_metronic/assets/ts/layout";
-import { KTIcon, toAbsoluteUrl } from "../../../../../../_metronic/helpers";
-import { getThingList } from "../../../../things/api/ThingAPI";
+import { KTIcon, toAbsoluteUrl, WidgetParameters } from "../../../../../../_metronic/helpers";
 
-interface IAddChartProps {
-  selectedWidget: any;
+interface ICreateViewProps {
+  selectedLayout: any;
   onCloseAddChart: () => void;
   onGetChartList: () => void;
   isActivated: any;
   onGetPreviewWidgetList: (data: any) => void;
 }
 
-const CreateView = ({ selectedWidget, onCloseAddChart, onGetChartList, onGetPreviewWidgetList }: IAddChartProps) => {
-  let ktThemeModeValue = localStorage.getItem("kt_theme_mode_value");
-  if (ktThemeModeValue === "system") {
-    ktThemeModeValue = ThemeModeComponent.getSystemMode() as "light" | "dark";
-  }
-  const filterDevice = {
-    limit: 100,
-    offset: 0,
-    status: "enabled",
-  };
-  const deviceListQuery = useQuery({
-    queryKey: [`deviceList`, filterDevice],
-    queryFn: async () => getThingList(filterDevice).catch((error) => toast.error(error.message)),
-    enabled: true,
-  });
-  const deviceList = deviceListQuery.data?.things.map((thing: any) => ({ label: thing.name, value: thing.id })) || [];
-  // Extract and flatten the tags, then remove duplicates
-  const uniqueTags = Array.from(
-    new Set(
-      (deviceListQuery.data?.things.flatMap((thing: any) => thing.tags as string[]) || [])
-        .filter((tag: string | undefined) => tag) // Filter out undefined, null, or empty tags
-        .map((tag: string) => tag.trim()) // Normalize tags by trimming and converting to lowercase
-    )
-  ).map((tag) => ({ label: tag }));
-  console.log("uniqueTags", uniqueTags);
-
+const CreateView = ({ selectedLayout, onCloseAddChart, onGetChartList, onGetPreviewWidgetList }: ICreateViewProps) => {
   const chartSchema = Yup.object().shape({
     name: Yup.string().required("Name is required"),
-    description: Yup.string(),
     devices: Yup.array().min(1, "Device is required"),
-    duration: Yup.number(),
+    timeline: Yup.number(),
     fromDate: Yup.date(),
     toDate: Yup.date(),
+    interval: Yup.string(),
+    layout: Yup.string(),
   });
 
   const formik = useFormik({
     initialValues: {
       name: "",
-      description: "",
       devices: [],
-      duration: 1,
-      fromDate: null,
-      toDate: null,
+      timeline: 30,
+      fromDate: undefined,
+      toDate: undefined,
+      interval: "",
+      layout: selectedLayout?.name,
     },
     validationSchema: chartSchema,
     onSubmit: async (values) => {
       onGetChartList();
-      const data = {
-        name: values.name,
-        description: values.description,
-        devices: values.devices.map((device: any) => ({
-          name: device.label,
-          sensorType: device.sensorType,
-        })),
-        duration: values.duration,
-        fromDate: values.fromDate,
-        toDate: values.toDate,
-      };
-      onGetPreviewWidgetList(data);
+      onGetPreviewWidgetList(values);
       onCloseAddChart();
       //   createChart(values)
       //     .then(() => {
-      //       toast.success("Chart created successfully");
+      //       toast.success("Widget created successfully");
       //       onCloseAddChart();
       //       onGetChartList();
       //     })
@@ -89,7 +50,7 @@ const CreateView = ({ selectedWidget, onCloseAddChart, onGetChartList, onGetPrev
 
   return (
     <>
-      <div className="modal fade show d-block" id="kt_modal_add_chart" role="dialog" tabIndex={-1} aria-modal="true">
+      <div className="modal fade show d-block" id="kt_modal_create_view" role="dialog" tabIndex={-1} aria-modal="true">
         {/* begin::Modal dialog */}
         <div className="modal-dialog modal-dialog-centered mw-900px">
           {/* begin::Modal content */}
@@ -107,7 +68,7 @@ const CreateView = ({ selectedWidget, onCloseAddChart, onGetChartList, onGetPrev
             </div>
             {/* begin::Modal body */}
             <div className="modal-body mx-5 mx-xl-15 my-7">
-              <form id="kt_modal_add_chart_form" className="form" onSubmit={formik.handleSubmit} noValidate>
+              <form id="kt_modal_create_view_form" className="form" onSubmit={formik.handleSubmit} noValidate>
                 {/* begin::Scroll */}
                 <div className="d-flex flex-column me-n7 pe-7">
                   <div className="row">
@@ -139,36 +100,8 @@ const CreateView = ({ selectedWidget, onCloseAddChart, onGetChartList, onGetPrev
                   <div className="row">
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
-                        <label className="fw-bold fs-6 mb-2">Description</label>
-                        <input
-                          {...formik.getFieldProps("description")}
-                          type="text"
-                          name="description"
-                          placeholder="Widget Description"
-                          className={clsx(
-                            "form-control mb-3 mb-lg-0",
-                            { "is-invalid": formik.touched.description && formik.errors.description },
-                            { "is-valid": formik.touched.description && !formik.errors.description }
-                          )}
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="row">
-                    <div className="col-md-12">
-                      <div className="fv-row mb-6">
-                        <label className="required fw-bold fs-6 mb-2">Device</label>
-                        <Typeahead
-                          id="devices"
-                          {...formik.getFieldProps("devices")}
-                          multiple
-                          labelKey="label"
-                          options={deviceList}
-                          selected={formik.values.devices}
-                          onChange={(selected: any) => formik.setFieldValue("devices", selected)}
-                          placeholder="Select Device"
-                        />
+                        <label className="required fw-bold fs-6 mb-2">Parameters</label>
+                        <WidgetParameters deviceData={formik.values.devices} setDeviceData={(device: any) => formik.setFieldValue("devices", device)} />
                         {formik.touched.devices && formik.errors.devices && (
                           <div className="fv-plugins-message-container">
                             <div className="fv-help-block">
@@ -179,38 +112,68 @@ const CreateView = ({ selectedWidget, onCloseAddChart, onGetChartList, onGetPrev
                       </div>
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
-                        <label className="required fw-bold fs-6 mb-2">Duration</label>
-                        <select {...formik.getFieldProps("duration")} className="form-select form-select form-select-lg fw-bold" name="duration">
-                          <option value="">Select Duration</option>
+                        <label className="fw-bold fs-6 mb-2">Timeline</label>
+                        {/* <select {...formik.getFieldProps("timeline")} className="form-select form-select form-select-lg fw-bold" name="timeline">
+                          <option value="">Select Timeline</option>
                           <option value="7">7 days</option>
                           <option value="15">15 days</option>
                           <option value="30">30 days</option>
                           <option value="90">3 months</option>
                           <option value="180">6 months</option>
                           <option value="360">1 year</option>
-                        </select>
-                        {formik.touched.duration && formik.errors.duration && (
-                          <div className="fv-plugins-message-container">
-                            <div className="fv-help-block">
-                              <span role="alert">{formik.errors.duration}</span>
-                            </div>
-                          </div>
-                        )}
+                        </select> */}
+                        <div className="flex-row mb-6">
+                          <label className="m-2 cursor-pointer">
+                            <input {...formik.getFieldProps("timeline")} type="radio" name="timeline" value={30} className="form-check-input" defaultChecked={true} />
+                            <span className="fw-bold fs-6 mx-2">1 Month</span>
+                          </label>
+                          <label className="m-2 cursor-pointer">
+                            <input {...formik.getFieldProps("timeline")} type="radio" name="timeline" value={90} className="form-check-input" />
+                            <span className="fw-bold fs-6 mx-2">3 Months</span>
+                          </label>
+                          <label className="m-2 cursor-pointer">
+                            <input {...formik.getFieldProps("timeline")} type="radio" name="timeline" value={180} className="form-check-input" />
+                            <span className="fw-bold fs-6 mx-2">6 Months</span>
+                          </label>
+                          <label className="m-2 cursor-pointer">
+                            <input {...formik.getFieldProps("timeline")} type="radio" name="timeline" value={0} className="form-check-input" />
+                            <span className="fw-bold fs-6 mx-2">Custom</span>
+                          </label>
+                          {String(formik.values.timeline) === "0" && (
+                            <label>
+                              <div className="d-flex">
+                                <input {...formik.getFieldProps("fromDate")} type="date" className="form-control w-150px mx-2" name="fromDate" placeholder="From Date" />
+                                <input {...formik.getFieldProps("toDate")} type="date" className="form-control w-150px" name="toDate" placeholder="To Date" />
+                              </div>
+                            </label>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-
+                  <div className="row">
+                    <div className="col-md-3">
+                      <div className="fv-row mb-6">
+                        <label className="fw-bold fs-6 mb-2">Interval</label>
+                        <select {...formik.getFieldProps("interval")} className="form-select form-select form-select-lg fw-bold" name="interval">
+                          <option value="">Select Interval</option>
+                          <option value="10s">10s</option>
+                          <option value="30s">30s</option>
+                          <option value="1m">1m</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                   <div className="row">
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
-                        <label className="fw-bold fs-6 mb-2">Layout: {selectedWidget?.name}</label>
+                        <label className="fw-bold fs-6 mb-2">Layout: {selectedLayout?.name}</label>
                         <div className="overlay me-7">
                           <div className="overlay-wrapper">
-                            <img alt="img" className="rounded w-200px" src={toAbsoluteUrl(selectedWidget?.imageUrl)} />
+                            <img alt="img" className="rounded w-200px" src={toAbsoluteUrl(selectedLayout?.imageUrl)} />
                           </div>
                         </div>
                       </div>

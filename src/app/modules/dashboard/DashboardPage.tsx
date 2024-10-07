@@ -1,7 +1,8 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { PageLink, PageTitle } from "../../../_metronic/layout/core";
 import { DashboardList } from "./components/DashboardList/DashboardList";
-import { EditDashboard } from "./components/AddEditDashboard/EditDashboard";
+import { ViewDashboard } from "./components/AddEditDashboard/ViewDashboard";
+import { LayoutBuilder } from "./components/AddEditDashboard/LayoutBuilder";
 
 const channelBreadCrumbs: Array<PageLink> = [
   {
@@ -23,11 +24,20 @@ const DashboardPage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path="edit/:id"
+          path=":id/view"
           element={
             <>
-              <PageTitle breadcrumbs={channelBreadCrumbs}>Edit Dashboard</PageTitle>
-              <EditDashboard />
+              <PageTitle breadcrumbs={channelBreadCrumbs}>View Dashboard</PageTitle>
+              <ViewDashboard />
+            </>
+          }
+        />
+        <Route
+          path=":id/layout"
+          element={
+            <>
+              <PageTitle breadcrumbs={channelBreadCrumbs}>Layout Builder</PageTitle>
+              <LayoutBuilder />
             </>
           }
         />

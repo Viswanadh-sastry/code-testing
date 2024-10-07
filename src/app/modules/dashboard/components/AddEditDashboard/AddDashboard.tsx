@@ -1,8 +1,9 @@
 import clsx from "clsx";
 import { useFormik } from "formik";
+import { toast } from "react-toastify";
 import * as Yup from "yup";
-import { ThemeModeComponent } from "../../../../../_metronic/assets/ts/layout";
 import { KTIcon } from "../../../../../_metronic/helpers";
+import { createDashboard } from "../../api/DashboardAPI";
 
 interface IAddDashboardProps {
   onCloseAddDashboard: () => void;
@@ -10,11 +11,6 @@ interface IAddDashboardProps {
 }
 
 const AddDashboard = ({ onCloseAddDashboard, onGetDashboardList }: IAddDashboardProps) => {
-  let ktThemeModeValue = localStorage.getItem("kt_theme_mode_value");
-  if (ktThemeModeValue === "system") {
-    ktThemeModeValue = ThemeModeComponent.getSystemMode() as "light" | "dark";
-  }
-
   const dashboardSchema = Yup.object().shape({
     name: Yup.string().required("Name is required"),
     description: Yup.string(),
@@ -26,16 +22,15 @@ const AddDashboard = ({ onCloseAddDashboard, onGetDashboardList }: IAddDashboard
       description: "",
     },
     validationSchema: dashboardSchema,
-    onSubmit: async () => {
-      onGetDashboardList();
-      //   createDashboard(values)
-      //     .then(() => {
-      //       toast.success("Dashboard created successfully");
-      //       onCloseAddDashboard();
-      //       onGetDashboardList();
-      //     })
-      //     .catch((error) => toast.error(error.message))
-      //     .finally(() => setSubmitting(false));
+    onSubmit: async (values, { setSubmitting }) => {
+      createDashboard(values)
+        .then(() => {
+          toast.success("Dashboard created successfully");
+          onCloseAddDashboard();
+          onGetDashboardList();
+        })
+        .catch((error) => toast.error(error.message))
+        .finally(() => setSubmitting(false));
     },
   });
 
@@ -97,20 +92,9 @@ const AddDashboard = ({ onCloseAddDashboard, onGetDashboardList }: IAddDashboard
                           type="text"
                           name="description"
                           placeholder="Dashboard Description"
-                          className={clsx(
-                            "form-control mb-3 mb-lg-0",
-                            { "is-invalid": formik.touched.description && formik.errors.description },
-                            { "is-valid": formik.touched.description && !formik.errors.description }
-                          )}
+                          className="form-control mb-3 mb-lg-0"
                           autoComplete="off"
                         />
-                        {formik.touched.description && formik.errors.description && (
-                          <div className="fv-plugins-message-container">
-                            <div className="fv-help-block">
-                              <span role="alert">{formik.errors.description}</span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

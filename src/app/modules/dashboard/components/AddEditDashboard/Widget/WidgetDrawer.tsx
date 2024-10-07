@@ -1,30 +1,31 @@
 import clsx from "clsx";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { Link } from "react-router-dom";
 import { KTIcon, toAbsoluteUrl } from "../../../../../../_metronic/helpers";
-import { AddChart } from "./AddChart";
 import { AddSensor } from "./AddSensor";
+import { CreateView } from "./CreateView";
 
 interface IWidgetDrawerProps {
+  selectedLayout: any;
+  setSelectedLayout: Dispatch<SetStateAction<any>>;
   onGetPreviewWidget: (data: any) => void;
 }
 
-const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
+const WidgetDrawer = ({ selectedLayout, setSelectedLayout, onGetPreviewWidget }: IWidgetDrawerProps) => {
   const [isActivated, setIsActivated] = useState({
     chart: true,
     sensor: false,
     other: false,
   });
-  const [selectedWidget, setSelectedWidget] = useState<any>(null);
-  const [isSelectWidget, setIsSelectWidget] = useState(false);
+  const [isSelectChart, setIsSelectChart] = useState(false);
   const [isSelectSensor, setIsSelectSensor] = useState(false);
 
-  const onSelectWidget = (widget: any) => {
-    setSelectedWidget(widget);
+  const onSelectWidget = (data: any) => {
+    setSelectedLayout(data);
   };
 
-  const onSelectSensor = (sensor: any) => {
-    setSelectedWidget(sensor);
+  const onSelectSensor = (data: any) => {
+    setSelectedLayout(data);
   };
 
   const onGetChartList = () => {
@@ -36,12 +37,10 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
   };
 
   const onCloseAddChart = () => {
-    setSelectedWidget(null);
-    setIsSelectWidget(false);
+    setIsSelectChart(false);
   };
 
   const onCloseAddSensor = () => {
-    setSelectedWidget(null);
     setIsSelectSensor(false);
   };
 
@@ -60,7 +59,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
         data-kt-drawer-close="#kt_widget_close"
       >
         {/* begin::Card */}
-        <div className="card shadow-none rounded-0 w-100">
+        <div className="card shadow-none rounded-0">
           {/* begin::Header */}
           <div className="card-header" id="kt_widget_header">
             <h5 className="card-title fw-bold text-gray-600">Select widget</h5>
@@ -74,17 +73,62 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
           {/* end::Header */}
 
           {/* begin::Body */}
-          <div className="card-body" id="kt_widget_body">
+          <div className="card-body position-relative" id="kt_widget_body">
             {/* begin::Content */}
             <div
               id="kt_widget_scroll"
-              className="hover-scroll-overlay-y"
+              className="position-relative scroll-y me-n5"
               data-kt-scroll="true"
               data-kt-scroll-height="auto"
               data-kt-scroll-wrappers="#kt_widget_body"
-              data-kt-scroll-dependencies="#kt_widget_header"
+              data-kt-scroll-dependencies="#kt_widget_header, #kt_widget_footer"
               data-kt-scroll-offset="5px"
             >
+              {/* begin::Widget Size */}
+              {/* <div className="form-group mb-7">
+                <div className="d-flex flex-column mb-4">
+                  <h4 className="fw-bold text-gray-900">Widget Size</h4>
+                </div>
+                <div className="d-flex justify-content-between gap-3">
+                  <div className="input-group">
+                    <input type="number" className="form-control" placeholder="Height" onChange={(e) => selectedLayout({ ...selectedLayout, height: e.target.value })} />
+                    <div className="input-group-append">
+                      <span className="input-group-text">px</span>
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <input type="number" className="form-control" placeholder="Width" onChange={(e) => selectedLayout({ ...selectedLayout, width: e.target.value })} />
+                    <div className="input-group-append">
+                      <span className="input-group-text">px</span>
+                    </div>
+                  </div>
+                </div>
+              </div> */}
+              {/* end::Widget Size */}
+
+              {/* begin::Widget Position */}
+              {/* <div className="form-group mb-7">
+                <div className="d-flex flex-column mb-4">
+                  <h4 className="fw-bold text-gray-900">Widget Position</h4>
+                </div>
+                <div className="d-flex justify-content-between gap-3">
+                  <div className="input-group">
+                    <input type="number" className="form-control" placeholder="Left" onChange={(e) => selectedLayout({ ...selectedLayout, left: e.target.value })} />
+                    <div className="input-group-append">
+                      <span className="input-group-text">px</span>
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <input type="number" className="form-control" placeholder="Top" onChange={(e) => selectedLayout({ ...selectedLayout, top: e.target.value })} />
+                    <div className="input-group-append">
+                      <span className="input-group-text">px</span>
+                    </div>
+                  </div>
+                  <input type="number" className="form-control" placeholder="Order" onChange={(e) => selectedLayout({ ...selectedLayout, order: e.target.value })} />
+                </div>
+              </div> */}
+              {/* end::Widget Position */}
+
               {/* begin::Widget Type */}
               <div className="form-group mb-7">
                 <div className="d-flex flex-column mb-4">
@@ -145,7 +189,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "line",
+                          active: selectedLayout?.name === "line",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -157,15 +201,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "line"}
-                            onChange={() => onSelectWidget({ id: 1, name: "line", imageUrl: "media/widget/line.png" })}
+                            checked={selectedLayout?.name === "line"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "line", imageUrl: "media/widget/line.png" })}
                           />
                           <div className="form-check-label text-gray-800">Line</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "area",
+                          active: selectedLayout?.name === "area",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -177,8 +221,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "area"}
-                            onChange={() => onSelectWidget({ id: 1, name: "area", imageUrl: "media/widget/area.png" })}
+                            checked={selectedLayout?.name === "area"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "area", imageUrl: "media/widget/area.png" })}
                           />
                           <div className="form-check-label text-gray-800">Area</div>
                         </div>
@@ -188,7 +232,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "bar",
+                          active: selectedLayout?.name === "bar",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -200,15 +244,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "bar"}
-                            onChange={() => onSelectWidget({ id: 1, name: "bar", imageUrl: "media/widget/bar.png" })}
+                            checked={selectedLayout?.name === "bar"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "bar", imageUrl: "media/widget/bar.png" })}
                           />
                           <div className="form-check-label text-gray-800">Bar</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "histogram",
+                          active: selectedLayout?.name === "histogram",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -220,8 +264,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "histogram"}
-                            onChange={() => onSelectWidget({ id: 1, name: "histogram", imageUrl: "media/widget/histogram.png" })}
+                            checked={selectedLayout?.name === "histogram"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "histogram", imageUrl: "media/widget/histogram.png" })}
                           />
                           <div className="form-check-label text-gray-800">Histogram</div>
                         </div>
@@ -231,7 +275,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "pie",
+                          active: selectedLayout?.name === "pie",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -243,15 +287,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "pie"}
-                            onChange={() => onSelectWidget({ id: 1, name: "pie", imageUrl: "media/widget/pie.png" })}
+                            checked={selectedLayout?.name === "pie"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "pie", imageUrl: "media/widget/pie.png" })}
                           />
                           <div className="form-check-label text-gray-800">Pie</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "donut",
+                          active: selectedLayout?.name === "donut",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -263,8 +307,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "donut"}
-                            onChange={() => onSelectWidget({ id: 1, name: "donut", imageUrl: "media/widget/donut.png" })}
+                            checked={selectedLayout?.name === "donut"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "donut", imageUrl: "media/widget/donut.png" })}
                           />
                           <div className="form-check-label text-gray-800">Donut</div>
                         </div>
@@ -274,7 +318,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "radialBar",
+                          active: selectedLayout?.name === "radialBar",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -286,15 +330,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "radialBar"}
-                            onChange={() => onSelectWidget({ id: 1, name: "radialBar", imageUrl: "media/widget/radialbar.png" })}
+                            checked={selectedLayout?.name === "radialBar"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "radialBar", imageUrl: "media/widget/radialbar.png" })}
                           />
                           <div className="form-check-label text-gray-800">RadialBar</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "scatter",
+                          active: selectedLayout?.name === "scatter",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -306,8 +350,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "scatter"}
-                            onChange={() => onSelectWidget({ id: 1, name: "scatter", imageUrl: "media/widget/scatter.png" })}
+                            checked={selectedLayout?.name === "scatter"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "scatter", imageUrl: "media/widget/scatter.png" })}
                           />
                           <div className="form-check-label text-gray-800">Scatter</div>
                         </div>
@@ -317,7 +361,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "bubble",
+                          active: selectedLayout?.name === "bubble",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -329,15 +373,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "bubble"}
-                            onChange={() => onSelectWidget({ id: 1, name: "bubble", imageUrl: "media/widget/bubble.png" })}
+                            checked={selectedLayout?.name === "bubble"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "bubble", imageUrl: "media/widget/bubble.png" })}
                           />
                           <div className="form-check-label text-gray-800">Bubble</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "heatmap",
+                          active: selectedLayout?.name === "heatmap",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -349,8 +393,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "heatmap"}
-                            onChange={() => onSelectWidget({ id: 1, name: "heatmap", imageUrl: "media/widget/heatmap.png" })}
+                            checked={selectedLayout?.name === "heatmap"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "heatmap", imageUrl: "media/widget/heatmap.png" })}
                           />
                           <div className="form-check-label text-gray-800">Heatmap</div>
                         </div>
@@ -360,7 +404,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "candlestick",
+                          active: selectedLayout?.name === "candlestick",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -372,15 +416,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "candlestick"}
-                            onChange={() => onSelectWidget({ id: 1, name: "candlestick", imageUrl: "media/widget/candlestick.png" })}
+                            checked={selectedLayout?.name === "candlestick"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "candlestick", imageUrl: "media/widget/candlestick.png" })}
                           />
                           <div className="form-check-label text-gray-800">Candlestick</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "boxPlot",
+                          active: selectedLayout?.name === "boxPlot",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -392,8 +436,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "boxPlot"}
-                            onChange={() => onSelectWidget({ id: 1, name: "boxPlot", imageUrl: "media/widget/boxplot.png" })}
+                            checked={selectedLayout?.name === "boxPlot"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "boxPlot", imageUrl: "media/widget/boxplot.png" })}
                           />
                           <div className="form-check-label text-gray-800">BoxPlot</div>
                         </div>
@@ -403,7 +447,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "radar",
+                          active: selectedLayout?.name === "radar",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -415,15 +459,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "radar"}
-                            onChange={() => onSelectWidget({ id: 1, name: "radar", imageUrl: "media/widget/radar.png" })}
+                            checked={selectedLayout?.name === "radar"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "radar", imageUrl: "media/widget/radar.png" })}
                           />
                           <div className="form-check-label text-gray-800">Radar</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "polarArea",
+                          active: selectedLayout?.name === "polarArea",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -435,8 +479,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "polarArea"}
-                            onChange={() => onSelectWidget({ id: 1, name: "polarArea", imageUrl: "media/widget/polararea.png" })}
+                            checked={selectedLayout?.name === "polarArea"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "polarArea", imageUrl: "media/widget/polararea.png" })}
                           />
                           <div className="form-check-label text-gray-800">PolarArea</div>
                         </div>
@@ -446,7 +490,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "rangeBar",
+                          active: selectedLayout?.name === "rangeBar",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -458,15 +502,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "rangeBar"}
-                            onChange={() => onSelectWidget({ id: 1, name: "rangeBar", imageUrl: "media/widget/rangebar.png" })}
+                            checked={selectedLayout?.name === "rangeBar"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "rangeBar", imageUrl: "media/widget/rangebar.png" })}
                           />
                           <div className="form-check-label text-gray-800">RangeBar</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "treemap",
+                          active: selectedLayout?.name === "treemap",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -478,8 +522,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "treemap"}
-                            onChange={() => onSelectWidget({ id: 1, name: "treemap", imageUrl: "media/widget/treemap.png" })}
+                            checked={selectedLayout?.name === "treemap"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "treemap", imageUrl: "media/widget/treemap.png" })}
                           />
                           <div className="form-check-label text-gray-800">Treemap</div>
                         </div>
@@ -500,7 +544,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "SquareCard",
+                          active: selectedLayout?.name === "SquareCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -512,15 +556,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "SquareCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "SquareCard", imageUrl: "media/widget/SquareCard.png" })}
+                            checked={selectedLayout?.name === "SquareCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "SquareCard", imageUrl: "media/widget/SquareCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Square Card</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "RectangleCard",
+                          active: selectedLayout?.name === "RectangleCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -532,8 +576,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "RectangleCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "RectangleCard", imageUrl: "media/widget/RectangleCard.png" })}
+                            checked={selectedLayout?.name === "RectangleCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "RectangleCard", imageUrl: "media/widget/RectangleCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Rectangle Card</div>
                         </div>
@@ -545,7 +589,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "LineCard",
+                          active: selectedLayout?.name === "LineCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -557,15 +601,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "LineCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "LineCard", imageUrl: "media/widget/LineCard.png" })}
+                            checked={selectedLayout?.name === "LineCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "LineCard", imageUrl: "media/widget/LineCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Line Card</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "AnalogCard",
+                          active: selectedLayout?.name === "AnalogCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -577,8 +621,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "AnalogCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "AnalogCard", imageUrl: "media/widget/AnalogCard.png" })}
+                            checked={selectedLayout?.name === "AnalogCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "AnalogCard", imageUrl: "media/widget/AnalogCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Analog Card</div>
                         </div>
@@ -590,7 +634,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "VerticalCard",
+                          active: selectedLayout?.name === "VerticalCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -602,15 +646,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "VerticalCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "VerticalCard", imageUrl: "media/widget/VerticalCard.png" })}
+                            checked={selectedLayout?.name === "VerticalCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "VerticalCard", imageUrl: "media/widget/VerticalCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Vertical Card</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "HorizontalCard",
+                          active: selectedLayout?.name === "HorizontalCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -622,8 +666,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "HorizontalCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "HorizontalCard", imageUrl: "media/widget/HorizontalCard.png" })}
+                            checked={selectedLayout?.name === "HorizontalCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "HorizontalCard", imageUrl: "media/widget/HorizontalCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Horizontal Card</div>
                         </div>
@@ -634,7 +678,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "TableCard",
+                          active: selectedLayout?.name === "TableCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -646,15 +690,15 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "TableCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "TableCard", imageUrl: "media/widget/TableCard.png" })}
+                            checked={selectedLayout?.name === "TableCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "TableCard", imageUrl: "media/widget/TableCard.png" })}
                           />
                           <div className="form-check-label text-gray-800">Table Card</div>
                         </div>
                       </label>
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "HorizontalLineCard",
+                          active: selectedLayout?.name === "HorizontalLineCard",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -666,8 +710,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "HorizontalLineCard"}
-                            onChange={() => onSelectSensor({ id: 1, name: "HorizontalLineCard", imageUrl: "media/widget/ProgressLine.png" })}
+                            checked={selectedLayout?.name === "HorizontalLineCard"}
+                            onChange={() => onSelectSensor({ ...selectedLayout, name: "HorizontalLineCard", imageUrl: "media/widget/ProgressLine.png" })}
                           />
                           <div className="form-check-label text-gray-800">Horizontal Line Card</div>
                         </div>
@@ -688,7 +732,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                     <div className="d-flex flex-row">
                       <label
                         className={clsx("form-check-image form-check-success p-2", {
-                          active: selectedWidget?.name === "other",
+                          active: selectedLayout?.name === "other",
                         })}
                       >
                         <div className="form-check-wrapper">
@@ -700,8 +744,8 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                             type="radio"
                             value="saas"
                             name="model.app.toolbar.layout"
-                            checked={selectedWidget?.name === "other"}
-                            onChange={() => onSelectWidget({ id: 1, name: "other", imageUrl: "media/stock/600x400/img-33.jpg" })}
+                            checked={selectedLayout?.name === "other"}
+                            onChange={() => onSelectWidget({ ...selectedLayout, name: "other", imageUrl: "media/stock/600x400/img-33.jpg" })}
                           />
                           <div className="form-check-label text-gray-800">Other</div>
                         </div>
@@ -710,31 +754,28 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
                   </div>
                 </div>
               )}
-
-              {/* <Link to="#" className={`btn btn-primary w-100 ${!selectedWidget && "disabled"}`} onClick={() => setIsSelectWidget(true)}>
-                Continue
-              </Link> */}
-
-              {isActivated.chart ? (
-                <Link to="#" className={`btn btn-primary w-100 ${!selectedWidget && "disabled"}`} onClick={() => setIsSelectWidget(true)}>
-                  Continue
-                </Link>
-              ) : (
-                <Link to="#" className={`btn btn-primary w-100 ${!selectedWidget && "disabled"}`} onClick={() => setIsSelectSensor(true)}>
-                  Continue
-                </Link>
-              )}
               {/* end::Widget */}
             </div>
             {/* end::Content */}
           </div>
           {/* end::Body */}
+          <div className="card-footer py-5 text-center" id="kt_widget_footer">
+            {isActivated.chart ? (
+              <Link to="#" className={`btn btn-primary w-100 ${!selectedLayout && "disabled"}`} onClick={() => setIsSelectChart(true)}>
+                Continue
+              </Link>
+            ) : (
+              <Link to="#" className={`btn btn-primary w-100 ${!selectedLayout && "disabled"}`} onClick={() => setIsSelectSensor(true)}>
+                Continue
+              </Link>
+            )}
+          </div>
         </div>
         {/* end::Card */}
       </div>
-      {isSelectWidget && (
-        <AddChart
-          selectedWidget={selectedWidget}
+      {isSelectChart && (
+        <CreateView
+          selectedLayout={selectedLayout}
           isActivated={isActivated}
           onCloseAddChart={onCloseAddChart}
           onGetChartList={onGetChartList}
@@ -743,7 +784,7 @@ const WidgetDrawer = ({ onGetPreviewWidget }: IWidgetDrawerProps) => {
       )}
 
       {isSelectSensor && (
-        <AddSensor selectedWidget={selectedWidget} isActivated={isActivated} onCloseAddSensor={onCloseAddSensor} onGetPreviewWidgetList={(data) => onGetPreviewWidgetList(data)} />
+        <AddSensor selectedLayout={selectedLayout} isActivated={isActivated} onCloseAddSensor={onCloseAddSensor} onGetPreviewWidgetList={(data) => onGetPreviewWidgetList(data)} />
       )}
     </>
   );
