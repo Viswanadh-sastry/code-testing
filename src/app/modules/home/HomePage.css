@@ -1,0 +1,73 @@
+/* Users - #f8c529 */
+.btn-users {
+    background-color: #FCF0A3;
+    border-color: #FCF0A3;
+    color: #000000;
+}
+
+.btn-users:hover {
+    background-color: #f8c529;
+    border-color: #f8c529;
+    color: #fff;
+}
+
+.btn-users.active {
+    background-color: #f8c529;
+    border-color: #f8c529;
+    color: #fff;
+}
+
+/* Devices - #f9bc34 */
+.btn-devices {
+    background-color: whitesmoke;
+    color: #000000;
+}
+
+.btn-devices:hover {
+    background-color: #f9bc34;
+    border-color: #f9bc34;
+    color: #fff;
+}
+
+.btn-devices.active {
+    background-color: #f9bc34;
+    border-color: #f9bc34;
+    color: #fff;
+}
+
+/* Groups - #f9a62a */
+.btn-groups {
+    background-color: whitesmoke;
+    color: #000000;
+}
+
+.btn-groups:hover {
+    background-color: #f9a62a;
+    border-color: #f9a62a;
+    color: #fff;
+}
+
+.btn-groups.active {
+    background-color: #f9a62a;
+    border-color: #f9a62a;
+    color: #fff;
+}
+
+/* Assets - #f9942a */
+.btn-assets {
+    background-color: #FCF1A3;
+    border-color: #FCF1A3;
+    color: #000000;
+}
+
+.btn-assets:hover {
+    background-color: #f9942a;
+    border-color: #f9942a;
+    color: #fff;
+}
+
+.btn-assets.active {
+    background-color: #f9942a;
+    border-color: #f9942a;
+    color: #fff;
+}

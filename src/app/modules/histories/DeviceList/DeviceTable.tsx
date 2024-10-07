@@ -1,0 +1,168 @@
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { ColumnInstance, Row, useTable } from "react-table";
+import { toast } from "react-toastify";
+import { KTCardBody } from "../../../../_metronic/helpers";
+import { getThingChannelList } from "../../things/api/ThingChannelAPI";
+import { getHistoryList } from "../api/HistoryAPI";
+import { History } from "../api/_models";
+import { DeviceListHeader } from "./DeviceListHeader";
+import { CustomHeaderColumn } from "./columns/CustomHeaderColumn";
+import { CustomRow } from "./columns/CustomRow";
+import { assetColumns } from "./columns/_columns";
+import { DeviceListLoading } from "./pagination/DeviceListLoading";
+import { DeviceListPagination } from "./pagination/DeviceListPagination";
+
+const DeviceTable = () => {
+  const [filterDevice, setFilterDevice] = useState({
+    limit: 100, // Always fetch 100 records from the API
+    offset: 0,
+    thingId: [],
+    status: "enabled",
+    name: [],
+    from: 0,
+    to: 0,
+    publisher: "",
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10); // Dynamic items per page
+
+  const filterGroupChannel = {
+    offset: 0,
+    limit: 100,
+    name: "",
+    status: "enabled",
+  };
+
+  interface LocationState {
+    selectedValues: [];
+  }
+
+  const params = useParams();
+  const thingId = params.id;
+
+  const location = useLocation();
+  const { selectedValues } = (location.state as LocationState) || [];
+
+  useEffect(() => {
+    if (selectedValues) {
+      setFilterDevice({ ...filterDevice, thingId: selectedValues });
+    }
+  }, [selectedValues]);
+
+  const channelListByThingIdQuery = useQuery({
+    queryKey: [`thingListByChannelId`, thingId || filterDevice.thingId, filterGroupChannel],
+    queryFn: async () => {
+      const channelList = [];
+      if (thingId) {
+        const channelListByThingId = await getThingChannelList(thingId, filterGroupChannel);
+        if (channelListByThingId.groups) {
+          const groupsWithThingId = channelListByThingId.groups.map((group: any) => ({
+            ...group,
+            thingId,
+          }));
+          channelList.push(...groupsWithThingId);
+        }
+      } else if (filterDevice.thingId) {
+        for (const thingId of filterDevice.thingId) {
+          const channelListByThingId = await getThingChannelList(thingId, filterGroupChannel);
+          if (channelListByThingId.groups) {
+            const groupsWithThingId = channelListByThingId.groups.map((group: any) => ({
+              ...group,
+              thingId,
+            }));
+            channelList.push(...groupsWithThingId);
+          }
+        }
+      }
+      return channelList;
+    },
+    enabled: !!filterDevice.thingId || !!thingId,
+  });
+
+  const deviceHistoryListQuery = useQuery({
+    queryKey: [`deviceHistoryList`, filterDevice],
+    queryFn: async () => {
+      if (!channelListByThingIdQuery.isSuccess || !channelListByThingIdQuery.data) return [];
+
+      const channelList = channelListByThingIdQuery.data || [];
+      const allHistoryData = [];
+
+      for (const channel of channelList) {
+        const filterWithPublisher = { ...filterDevice, publisher: channel.thingId };
+
+        try {
+          const historyData = await getHistoryList(channel.id, filterWithPublisher);
+          if (historyData.messages) {
+            allHistoryData.push(...historyData.messages);
+          }
+        } catch (error: any) {
+          toast.error(error.message);
+        }
+      }
+
+      return allHistoryData;
+    },
+    enabled: channelListByThingIdQuery.isSuccess && !!channelListByThingIdQuery.data,
+  });
+
+  const isLoading = deviceHistoryListQuery.isLoading || channelListByThingIdQuery.isLoading;
+
+  // Paginate the data based on currentPage and itemsPerPage
+  const data = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return (deviceHistoryListQuery.data || []).slice(start, end);
+  }, [deviceHistoryListQuery.data, currentPage, itemsPerPage]);
+
+  const columns = useMemo(() => assetColumns, []);
+  const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
+    columns,
+    data,
+  });
+
+  return (
+    <div className="card w-100">
+      <DeviceListHeader setFilterDevice={setFilterDevice} deviceHistoryList={deviceHistoryListQuery.data || []} />
+      <KTCardBody className="py-4">
+        <div className="table-responsive">
+          <table id="kt_table_groups" className="table align-middle table-row-dashed fs-6 dataTable no-footer" {...getTableProps()}>
+            <thead>
+              <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
+                {headers.map((column: ColumnInstance<History>) => (
+                  <CustomHeaderColumn key={column.id} column={column} />
+                ))}
+              </tr>
+            </thead>
+            <tbody className="text-gray-600" {...getTableBodyProps()}>
+              {rows.length > 0 ? (
+                rows.map((row: Row<History>, i) => {
+                  prepareRow(row);
+                  return <CustomRow row={row} key={`row-${i}-${row.id}`} />;
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="d-flex text-center w-100 align-content-center justify-content-center">No matching records found</div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <DeviceListPagination
+          deviceHistoryListQuery={deviceHistoryListQuery}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+        />
+        {isLoading && <DeviceListLoading />}
+      </KTCardBody>
+    </div>
+  );
+};
+
+export { DeviceTable };
