@@ -3,6 +3,7 @@ import { PageLink, PageTitle } from "../../../_metronic/layout/core";
 import { DashboardList } from "./components/DashboardList/DashboardList";
 import { ViewDashboard } from "./components/AddEditDashboard/ViewDashboard";
 import { LayoutBuilder } from "./components/AddEditDashboard/LayoutBuilder";
+import { DashboardIcon } from "./components/DashboardList/DashboardIcon";
 
 const channelBreadCrumbs: Array<PageLink> = [
   {
@@ -42,6 +43,15 @@ const DashboardPage = () => {
           }
         />
         <Route
+          path="icon"
+          element={
+            <>
+              <PageTitle breadcrumbs={channelBreadCrumbs}>Dashboard List</PageTitle>
+              <DashboardIcon />
+            </>
+          }
+        />
+        <Route
           path="list"
           element={
             <>
@@ -50,7 +60,7 @@ const DashboardPage = () => {
             </>
           }
         />
-        <Route index element={<Navigate to="/dashboard/list" />} />
+        <Route index element={<Navigate to="/dashboard/icon" />} />
       </Route>
     </Routes>
   );

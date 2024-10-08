@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useFormik } from "formik";
+import { useMemo } from "react";
 import { toast } from "react-toastify";
 import * as Yup from "yup";
 import { KTIcon } from "../../../../../_metronic/helpers";
@@ -18,8 +19,7 @@ const EditDashboard = ({ id, onCloseEditDashboard, onGetDashboardList }: IEditDa
     queryFn: async () => getDashboard(id).catch((error) => toast.error(error.message)),
     enabled: true,
   });
-  const dashboard = dashboardQuery.data;
-
+  const dashboard = useMemo(() => dashboardQuery.data?.dashboard || [], [dashboardQuery.data]);
   const dashboardSchema = Yup.object().shape({
     id: Yup.string().required("Id is required"),
     name: Yup.string().required("Name is required"),
@@ -32,6 +32,7 @@ const EditDashboard = ({ id, onCloseEditDashboard, onGetDashboardList }: IEditDa
       name: dashboard?.name || "",
       description: dashboard?.description || "",
     },
+    enableReinitialize: true,
     validationSchema: dashboardSchema,
     onSubmit: async (values, { setSubmitting }) => {
       updateDashboard(values)
@@ -70,7 +71,7 @@ const EditDashboard = ({ id, onCloseEditDashboard, onGetDashboardList }: IEditDa
                 <div className="d-flex flex-column me-n7 pe-7">
                   <div className="row">
                     <div className="col-md-12">
-                      <div className="fv-row mb-6">
+                      <div className="fv-row text-start mb-6">
                         <label className="required fw-bold fs-6 mb-2">Name</label>
                         <input
                           {...formik.getFieldProps("name")}
@@ -96,7 +97,7 @@ const EditDashboard = ({ id, onCloseEditDashboard, onGetDashboardList }: IEditDa
                   </div>
                   <div className="row">
                     <div className="col-md-12">
-                      <div className="fv-row mb-6">
+                      <div className="fv-row text-start mb-6">
                         <label className="fw-bold fs-6 mb-2">Description</label>
                         <input
                           {...formik.getFieldProps("description")}

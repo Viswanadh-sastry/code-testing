@@ -24,14 +24,14 @@ export async function updateDashboard(data: any) {
 }
 
 export async function deleteDashboard(id: string) {
-    const response = await axios.delete(`${API_URL}/dashboards/${id}`);
+    const response = await axios.delete(`${API_URL}/dashboards`, { data: { id } });
     return response.data;
 }
 
 const searchDashboard = (data: any) => {
     let query = "";
     query += `?limit=${data.limit}`;
-    query += `&page=${data.page+1}`;
+    query += `&page=${data.page}`;
     if (data.name) {
         if (query) {
             query += `&name=${data.name}`;

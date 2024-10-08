@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
+import { useNavigate } from "react-router-dom";
 import { KTIcon } from "../../../../../_metronic/helpers";
 
 interface IDashboardListHeaderProps {
@@ -15,6 +16,7 @@ interface IDashboardListHeaderProps {
 }
 
 const DashboardListHeader = ({ onShowAddDashboard, setFilterDashboard, view, setView }: IDashboardListHeaderProps) => {
+  const navigate = useNavigate();
   return (
     <>
       <div className="card-header border-0 pt-6">
@@ -46,10 +48,22 @@ const DashboardListHeader = ({ onShowAddDashboard, setFilterDashboard, view, set
               <KTIcon iconName={view === "icon" ? "abstract-29" : "abstract-14"} className="fs-2 p-0" />
             </button>
             <div className="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4" data-kt-menu="true">
-              <div className="menu-item px-3" onClick={() => setView("icon")}>
+              <div
+                className="menu-item px-3"
+                onClick={() => {
+                  setView("icon");
+                  navigate("/dashboard/icon");
+                }}
+              >
                 <a className="menu-link px-3">Icon</a>
               </div>
-              <div className="menu-item px-3" onClick={() => setView("list")}>
+              <div
+                className="menu-item px-3"
+                onClick={() => {
+                  setView("list");
+                  navigate("/dashboard/list");
+                }}
+              >
                 <a className="menu-link px-3">List</a>
               </div>
             </div>

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { FC, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import { deleteDashboard, getDashboardList } from "../../../api/DashboardAPI";
@@ -11,14 +10,13 @@ type Props = {
 };
 
 const DashboardActionsCell: FC<Props> = ({ id }) => {
-  const navigate = useNavigate();
   const [showEditDashboard, setShowEditDashboard] = useState({
     id: "",
     edit: false,
   });
   const filterDashboard = {
-    limit: 10,
-    page: 0,
+    limit: 100,
+    page: 1,
     name: "",
   };
   const dashboardListQuery = useQuery({
@@ -42,7 +40,7 @@ const DashboardActionsCell: FC<Props> = ({ id }) => {
         deleteDashboard(id)
           .then(() => {
             toast.success("Dashboard deleted successfully");
-            navigate("/dashboard");
+            onGetDashboardList();
           })
           .catch((error) => toast.error(error.message));
       }

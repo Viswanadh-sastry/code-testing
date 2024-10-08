@@ -1,19 +1,20 @@
 import ApexCharts, { ApexOptions } from "apexcharts";
 import moment from "moment";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Rnd } from "react-rnd";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Rnd } from "react-rnd";
 import { KTCard, KTCardBody, KTIcon } from "../../../../../_metronic/helpers";
+import { getChannelThingList } from "../../../channels/api/ChannelThingAPI";
 import { getHistoryList } from "../../../histories/api/HistoryAPI";
 import { getThingChannelList } from "../../../things/api/ThingChannelAPI";
+import { getDashboard, updateDashboard } from "../../api/DashboardAPI";
 import { WidgetDrawer } from "./Widget/WidgetDrawer";
-import { getChannelThingList } from "../../../channels/api/ChannelThingAPI";
+import { useQuery } from "@tanstack/react-query";
 
 const LayoutBuilder = () => {
   const params = useParams();
   const id = params.id as string;
-  console.log("id", id);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const layoutData = {
     height: 400,
@@ -26,6 +27,15 @@ const LayoutBuilder = () => {
     imageUrl: "",
   };
   const [selectedLayout, setSelectedLayout] = useState<any>(layoutData);
+  const [sensorTypeList, setSensorTypeList] = useState<string[]>([]);
+  const [deviceData, setDeviceData] = useState<any[]>([]);
+  const [inputData, setInputData] = useState<any>(null);
+  const dashboardQuery = useQuery({
+    queryKey: [`dashboard`, id],
+    queryFn: async () => getDashboard(id).catch((error) => toast.error(error.message)),
+    enabled: true,
+  });
+  const dashboard = useMemo(() => dashboardQuery.data?.dashboard || [], [dashboardQuery.data]);
   const style = {
     // display: "flex",
     // alignItems: "center",
@@ -34,18 +44,66 @@ const LayoutBuilder = () => {
     background: "#f0f0f0",
   };
 
-  const refreshChart = async (data: any) => {
-    console.log("data", data);
-    if (!chartRef.current) return;
+  useEffect(() => {
+    if (dashboard.metadata) {
+      const widgetData = dashboard.metadata.widgets[0];
+      const layout = widgetData.layouts;
+      const metadata = widgetData.metadata;
+      const devices = metadata.parameters.map((parameter: any) => {
+        if (parameter.type === "thing") {
+          return {
+            deviceLabel: parameter.type,
+            deviceValue: parameter.thing,
+            deviceName: parameter.thingName,
+            sensorType: parameter.sensorType,
+          };
+        } else {
+          return {
+            deviceLabel: parameter.type,
+            deviceValue: parameter.channel,
+            sensorType: parameter.sensorType,
+          };
+        }
+      });
+      console.log("devices useEffect", devices);
+      const data = {
+        layout: layout.widgetType,
+        name: metadata.title,
+        interval: metadata.updateInterval,
+        timeline: metadata.timeline,
+        fromDate: metadata.fromDate,
+        toDate: metadata.toDate,
+        devices: devices,
+      };
+      const layoutData = {
+        height: layout.widgetSize.height,
+        width: layout.widgetSize.width,
+        left: layout.widgetPosition.left,
+        top: layout.widgetPosition.top,
+        order: layout.orderBy,
+        title: metadata.title,
+        name: layout.widgetType,
+      };
+      setSelectedLayout(layoutData);
+      refreshChart(data, false);
+    }
+  }, [dashboard.metadata]);
 
+  const refreshChart = async (data: any, isUpdated: boolean) => {
+    console.log("data", data);
+    // Clear the chart before rendering a new one
+    if (!chartRef.current) return;
+    if (chartRef.current) {
+      chartRef.current.innerHTML = "";
+    }
     const filterGroupChannel = {
       offset: 0,
       limit: 100,
       name: "",
       status: "enabled",
     };
-
-    const deviceList: any = [];
+    const deviceList: any[] = [];
+    const tempSensorTypeList: string[] = [];
     for (const device of data.devices) {
       if (device.deviceLabel === "thing") {
         const channelListByThingId = await getThingChannelList(device.deviceValue, filterGroupChannel);
@@ -70,11 +128,25 @@ const LayoutBuilder = () => {
           deviceList.push(...groupsWithChannelId);
         }
       }
+      console.log("device.sensorType", device.sensorType);
+      if (!tempSensorTypeList.includes(device.sensorType)) {
+        tempSensorTypeList.push(device.sensorType);
+      }
     }
+    setSensorTypeList(tempSensorTypeList);
+    setDeviceData(deviceList);
+    setInputData(data);
 
     // Set the current time for from and to
-    const fromTime = moment.utc(moment().subtract(data.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
-    const toTime = moment.utc(moment().format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+    let fromTime: number = 0;
+    let toTime: number = 0;
+    if (data.timeline === "0") {
+      fromTime = moment.utc(data.fromDate).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(data.toDate).startOf("day").valueOf() * 1000;
+    } else {
+      fromTime = moment.utc(moment().subtract(data.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(moment().format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+    }
 
     const allHistoryData = [];
     const filterDevice = {
@@ -82,12 +154,11 @@ const LayoutBuilder = () => {
       offset: 0,
       thingId: [],
       status: "enabled",
-      name: data.sensorType,
+      name: tempSensorTypeList[0],
       from: fromTime,
       to: toTime,
       publisher: "",
     };
-
     for (const device of deviceList) {
       const filterWithPublisher = { ...filterDevice, publisher: device.thingId };
       try {
@@ -101,15 +172,83 @@ const LayoutBuilder = () => {
     }
 
     // Call getChartOptions function
-    const chart = new ApexCharts(chartRef.current, getChartOptions(data.layout, data.sensorType, data.timeline, deviceList, allHistoryData));
+    const chart = new ApexCharts(chartRef.current, getChartOptions(tempSensorTypeList[0], data, deviceList, allHistoryData));
     if (chart) {
       chart.render();
       setSelectedLayout({
         ...selectedLayout,
         title: data.name,
       });
+      if (isUpdated) {
+        await saveDashboard(data, selectedLayout, deviceList);
+      }
     }
     return chart;
+  };
+
+  const saveDashboard = async (data: any, selectedLayout: any, deviceList: any[]) => {
+    try {
+      const widgetData = convertToJson(data, selectedLayout, deviceList);
+      const payload = {
+        id: id,
+        name: dashboard.name,
+        description: dashboard.description,
+        metadata: widgetData,
+      };
+      await updateDashboard(payload);
+      toast.success("Widget saved successfully");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const submitChart = async (sensorType: string) => {
+    console.log("inputData", inputData);
+    // Set the current time for from and to
+    const fromTime = moment.utc(moment().subtract(inputData.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+    const toTime = moment.utc(moment().format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+
+    const allHistoryData = [];
+    const filterDevice = {
+      limit: 100,
+      offset: 0,
+      thingId: [],
+      status: "enabled",
+      name: sensorType,
+      from: fromTime,
+      to: toTime,
+      publisher: "",
+    };
+    for (const device of deviceData) {
+      const filterWithPublisher = { ...filterDevice, publisher: device.thingId };
+      try {
+        const historyData = await getHistoryList(device.channelId, filterWithPublisher);
+        if (historyData.messages) {
+          allHistoryData.push(...historyData.messages);
+        }
+      } catch (error: any) {
+        toast.error(error.message);
+      }
+    }
+
+    // Call getChartOptions function
+    const chart = new ApexCharts(chartRef.current, getChartOptions(sensorType, inputData, deviceData, allHistoryData));
+    if (chart) {
+      chart.render();
+      setSelectedLayout({
+        ...selectedLayout,
+        title: inputData.name,
+      });
+    }
+    return chart;
+  };
+
+  const onSelectSensorType = (e: any) => {
+    // Clear the chart before rendering a new one
+    if (chartRef.current) {
+      chartRef.current.innerHTML = "";
+    }
+    submitChart(e.target.value);
   };
 
   return (
@@ -132,7 +271,7 @@ const LayoutBuilder = () => {
           <Rnd
             bounds="parent"
             style={style}
-            className="d-flex flex-column align-items-center justify-content-center"
+            className="d-flex flex-column align-items-center justify-content-center px-5"
             default={{ x: selectedLayout.left, y: selectedLayout.top, width: selectedLayout.width, height: selectedLayout.height }}
             size={{ width: selectedLayout.width, height: selectedLayout.height }}
             position={{ x: selectedLayout.left, y: selectedLayout.top }}
@@ -153,7 +292,22 @@ const LayoutBuilder = () => {
               });
             }}
           >
-            {selectedLayout.title}
+            <div className="d-flex justify-content-between w-100">
+              <div>
+                <h4>{selectedLayout.title}</h4>
+              </div>
+              <div>
+                {sensorTypeList.length > 0 && (
+                  <select className="form-select form-select-sm" aria-label=".form-select-sm example" onChange={onSelectSensorType}>
+                    {sensorTypeList.map((sensorType: any, index: number) => (
+                      <option key={index} value={sensorType}>
+                        {sensorType}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
             <div
               ref={chartRef}
               id="kt_charts_widget"
@@ -165,22 +319,89 @@ const LayoutBuilder = () => {
           </Rnd>
         </KTCardBody>
       </KTCard>
-      <WidgetDrawer selectedLayout={selectedLayout} setSelectedLayout={setSelectedLayout} onGetPreviewWidget={(data) => refreshChart(data)} />
+      <WidgetDrawer selectedLayout={selectedLayout} setSelectedLayout={setSelectedLayout} onGetPreviewWidget={(data) => refreshChart(data, true)} />
     </>
   );
 };
 
 export { LayoutBuilder };
 
+const convertToJson = (data: any, selectedLayout: any, deviceList: any[]) => {
+  return {
+    widgets: [
+      {
+        widgetId: `${data.layout}-${new Date().getTime()}`,
+        layouts: {
+          widgetType: data.layout,
+          widgetSize: {
+            width: selectedLayout.width,
+            height: selectedLayout.height,
+            minWidth: 500,
+            minHeight: 400,
+          },
+          widgetPosition: {
+            left: selectedLayout.left,
+            top: selectedLayout.top,
+            transform: "translateX(0px) translateY(0px)",
+          },
+          orderBy: selectedLayout.order,
+        },
+        metadata: {
+          parameters: data.devices.map((device: any) => {
+            if (device.deviceLabel === "thing") {
+              return {
+                type: device.deviceLabel,
+                thing: device.deviceValue,
+                thingName: device.deviceName,
+                sensorType: device.sensorType,
+              };
+            } else {
+              return {
+                type: device.deviceLabel,
+                channel: device.deviceValue,
+                thing: deviceList
+                  .filter((deviceItem: any) => deviceItem.channelId === device.deviceValue)
+                  .map((deviceItem: any) => {
+                    return {
+                      thingId: deviceItem.thingId,
+                      thingName: deviceItem.thingName,
+                    };
+                  }),
+                sensorType: device.sensorType,
+              };
+            }
+          }),
+          updateInterval: data.interval,
+          timeline: data.timeline,
+          fromDate: data.fromDate,
+          toDate: data.toDate,
+          aggregationType: "",
+          title: data.name,
+        },
+      },
+    ],
+  };
+};
+
 // final code for getChartOptions function
-function getChartOptions(layout: any, sensorType: string, timeline: number, deviceData: any, messages: any): ApexOptions {
+function getChartOptions(sensorType: string, inputData: any, deviceData: any, messages: any): ApexOptions {
   const categories: any = [];
-  for (let i = timeline - 1; i >= 0; i--) {
-    categories.push({
-      timeInFromTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000,
-      timeInToTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).endOf("day").valueOf() * 1000,
-      timeInDisplay: moment().subtract(i, "days").format("DD/MM"),
-    });
+  if (inputData.timeline === "0") {
+    for (let i = moment.utc(inputData.fromDate).startOf("day").valueOf(); i <= moment.utc(inputData.toDate).startOf("day").valueOf(); i += 86400000) {
+      categories.push({
+        timeInFromTimestamp: i,
+        timeInToTimestamp: i + 86400000,
+        timeInDisplay: moment.utc(i).format("DD/MM"),
+      });
+    }
+  } else {
+    for (let i = inputData.timeline - 1; i >= 0; i--) {
+      categories.push({
+        timeInFromTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000,
+        timeInToTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).endOf("day").valueOf() * 1000,
+        timeInDisplay: moment().subtract(i, "days").format("DD/MM"),
+      });
+    }
   }
   console.log("categories", categories);
 
@@ -206,6 +427,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
   console.log("series", series);
 
   // Chart Options for different layouts
+  const { layout } = inputData;
   if (layout === "pie" || layout === "donut") {
     return {
       series: series.map((serie: any) => serie.data.reduce((a: any, b: any) => a + b, 0)),
@@ -216,7 +438,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
       dataLabels: {
         enabled: false,
       },
-      labels: deviceData.map((device: any) => device.name),
+      labels: deviceData.map((device: any) => device.thingName),
       colors: ["#F97E1C", "#F9B32A", "#F9C63E", "#F9D94C", "#F9E75A", "#F9F068", "#FAF576", "#FAF884", "#FBF993", "#FBFAA2"],
     };
   } else if (layout === "histogram") {
@@ -262,7 +484,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
           },
         },
       },
-      labels: deviceData.map((device: any) => device.name),
+      labels: deviceData.map((device: any) => device.thingName),
       colors: ["#F97E1C", "#F9B32A", "#F9C63E", "#F9D94C", "#F9E75A", "#F9F068", "#FAF576", "#FAF884", "#FBF993", "#FBFAA2"],
     };
   } else if (layout === "scatter") {
@@ -314,7 +536,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
         height: 300,
         type: layout,
       },
-      labels: deviceData.map((device: any) => device.name),
+      labels: deviceData.map((device: any) => device.thingName),
       dataLabels: {
         enabled: false,
       },
@@ -332,7 +554,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
         height: 300,
         type: layout,
       },
-      labels: deviceData.map((device: any) => device.name),
+      labels: deviceData.map((device: any) => device.thingName),
       dataLabels: {
         enabled: false,
       },
@@ -350,7 +572,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
         {
           data: deviceData.map((device: any) => ({
             x: device.name,
-            y: series.find((serie: any) => serie.name === device.name)?.data.reduce((a: any, b: any) => a + b, 0),
+            y: series.find((serie: any) => serie.name === device.thingName)?.data.reduce((a: any, b: any) => a + b, 0),
           })),
         },
       ],
@@ -368,7 +590,7 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
       series: deviceData.map((device: any) => ({
         name: device.name,
         data: categories.map((category: any, index: number) => {
-          const value = series.find((serie: any) => serie.name === device.name)?.data[index];
+          const value = series.find((serie: any) => serie.name === device.thingName)?.data[index];
           return {
             x: category.timeInDisplay,
             y: value === 0 ? [0, 0] : [value - 5, value + 5],
@@ -392,9 +614,9 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
   } else if (layout === "candlestick") {
     return {
       series: deviceData.map((device: any) => ({
-        name: device.name,
+        name: device.thingName,
         data: categories.map((category: any, index: number) => {
-          const value = series.find((serie: any) => serie.name === device.name)?.data[index];
+          const value = series.find((serie: any) => serie.name === device.thingName)?.data[index];
           return {
             x: category.timeInDisplay,
             y: value === 0 ? [0, 0, 0, 0] : [value - 5, value + 5, value - 2, value + 2],
@@ -413,9 +635,9 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
   } else if (layout === "boxPlot") {
     return {
       series: deviceData.map((device: any) => ({
-        name: device.name,
+        name: device.thingName,
         data: categories.map((category: any, index: number) => {
-          const value = series.find((serie: any) => serie.name === device.name)?.data[index];
+          const value = series.find((serie: any) => serie.name === device.thingName)?.data[index];
           return {
             x: category.timeInDisplay,
             y: value === 0 ? [0, 0, 0, 0, 0] : [value - 10, value + 10, value - 5, value + 5, value],
@@ -434,9 +656,9 @@ function getChartOptions(layout: any, sensorType: string, timeline: number, devi
   } else if (layout === "bubble") {
     return {
       series: deviceData.map((device: any) => ({
-        name: device.name,
+        name: device.thingName,
         data: categories.map((category: any, index: number) => {
-          const value = series.find((serie: any) => serie.name === device.name)?.data[index];
+          const value = series.find((serie: any) => serie.name === device.thingName)?.data[index];
           return {
             x: category.timeInDisplay,
             y: value,
