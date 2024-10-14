@@ -26,7 +26,7 @@ const DashboardIcon = () => {
     enabled: !!userId,
   });
   const isLoading = dashboardListQuery.isLoading;
-  const data = useMemo(() => dashboardListQuery.data?.dashboards || [], [dashboardListQuery.data]);
+  const data = useMemo(() => dashboardListQuery.data?.dashboards.filter((row: Dashboard) => "id" in row && row.id !== "") || [], [dashboardListQuery.data]);
 
   useEffect(() => {
     if (data) {
@@ -46,27 +46,29 @@ const DashboardIcon = () => {
     setShowAddDashboard(false);
   };
 
-  console.log("dashboardListQuery", dashboardListQuery);
-
   return (
     <KTCard>
       <DashboardListHeader view={view} setView={setView} onShowAddDashboard={onShowAddDashboard} />
       <KTCardBody className="py-4">
         <div className="row">
-          {data.map((row: Dashboard) => {
-            return (
-              <div className="col-12 col-xl-2 col-lg-3 col-md-4 mb-5" key={row.id}>
-                <Card4
-                  id={row.id}
-                  url={`/dashboard/${row.id}/view`}
-                  icon="media/svg/files/folder-document.svg"
-                  title={row.name}
-                  description={row.description}
-                  onGetDashboardList={onGetDashboardList}
-                />
-              </div>
-            );
-          })}
+          {data.length > 0 ? (
+            data.map((row: Dashboard) => {
+              return (
+                <div className="col-12 col-xl-2 col-lg-3 col-md-4 mb-5" key={row.id}>
+                  <Card4
+                    id={row.id}
+                    url={`/dashboard/${row.id}/view`}
+                    icon="media/svg/files/folder-document.svg"
+                    title={row.name}
+                    description={row.description}
+                    onGetDashboardList={onGetDashboardList}
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-12 text-center my-5 py-5 fs-5 text-muted">No matching records found</div>
+          )}
         </div>
         {/* <DashboardListPagination filterDashboard={filterDashboard} setFilterDashboard={setFilterDashboard} /> */}
         {showAddDashboard && <AddDashboard onCloseAddDashboard={onCloseAddDashboard} onGetDashboardList={onGetDashboardList} />}

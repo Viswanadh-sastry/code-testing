@@ -72,7 +72,6 @@ const WidgetItem = ({ widgetData, dashboardData }: IWidgetItemProps) => {
   }, [widgetData]);
 
   const refreshChart = async (data: any) => {
-    console.log("data", data);
     // Clear the chart before rendering a new one
     if (!chartRef.current) return;
     if (chartRef.current) {
@@ -124,10 +123,10 @@ const WidgetItem = ({ widgetData, dashboardData }: IWidgetItemProps) => {
     let toTime: number = 0;
     if (data.timeline === "0") {
       fromTime = moment.utc(data.fromDate).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(data.toDate).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(data.toDate).endOf("day").valueOf() * 1000;
     } else {
       fromTime = moment.utc(moment().subtract(data.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(moment().format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000;
     }
 
     const allHistoryData = [];
@@ -175,10 +174,10 @@ const WidgetItem = ({ widgetData, dashboardData }: IWidgetItemProps) => {
     let toTime: number = 0;
     if (inputData.timeline === "0") {
       fromTime = moment.utc(inputData.fromDate).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(inputData.toDate).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(inputData.toDate).endOf("day").valueOf() * 1000;
     } else {
       fromTime = moment.utc(moment().subtract(inputData.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(moment().format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
+      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000;
     }
 
     const allHistoryData = [];
@@ -223,7 +222,6 @@ const WidgetItem = ({ widgetData, dashboardData }: IWidgetItemProps) => {
     }
     submitChart(e.target.value);
   };
-  console.log("selectedLayout", selectedLayout);
 
   return (
     <>
@@ -329,8 +327,8 @@ function getChartOptions(sensorType: string, inputData: any, deviceData: any, me
   if (inputData.timeline === "0") {
     for (let i = moment.utc(inputData.fromDate).startOf("day").valueOf(); i <= moment.utc(inputData.toDate).startOf("day").valueOf(); i += 86400000) {
       categories.push({
-        timeInFromTimestamp: i,
-        timeInToTimestamp: i + 86400000,
+        timeInFromTimestamp: i * 1000,
+        timeInToTimestamp: (i + 86400000) * 1000,
         timeInDisplay: moment.utc(i).format("DD/MM"),
       });
     }

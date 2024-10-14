@@ -3,9 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { KTCard, KTCardBody, KTIcon } from "../../../../../_metronic/helpers";
 import { useAuth } from "../../../auth";
-import { getChannelThingList } from "../../../channels/api/ChannelThingAPI";
 import { getHistoryList } from "../../../histories/api/HistoryAPI";
-import { getThingChannelList } from "../../../things/api/ThingChannelAPI";
 import { updateDashboard } from "../../api/DashboardAPI";
 import { editDashboard, getDashboard, getDashboardById } from "../../api/DashboardHelper";
 import { WidgetDrawer } from "./Widget/WidgetDrawer";
@@ -20,44 +18,6 @@ const LayoutBuilder = () => {
   const dashboard = getDashboardById(id);
 
   const refreshChart = async (data: any) => {
-    const filterGroupChannel = {
-      offset: 0,
-      limit: 100,
-      name: "",
-      status: "enabled",
-    };
-    const deviceList: any[] = [];
-    const tempSensorTypeList: string[] = [];
-    for (const device of data.devices) {
-      if (device.deviceLabel === "thing") {
-        const channelListByThingId = await getThingChannelList(device.deviceValue, filterGroupChannel);
-        if (channelListByThingId.groups) {
-          const groupsWithThingId = channelListByThingId.groups.map((group: any) => ({
-            channelId: group.id,
-            thingName: device.deviceName,
-            thingId: device.deviceValue,
-          }));
-          if (groupsWithThingId.length > 0) {
-            deviceList.push(groupsWithThingId[0]);
-          }
-        }
-      } else {
-        const channelListByGroupId = await getChannelThingList(device.deviceValue, filterGroupChannel);
-        if (channelListByGroupId.things) {
-          const groupsWithChannelId = channelListByGroupId.things.map((thing: any) => ({
-            channelId: device.deviceValue,
-            thingName: thing.name,
-            thingId: thing.id,
-          }));
-          deviceList.push(...groupsWithChannelId);
-        }
-      }
-      console.log("device.sensorType", device.sensorType);
-      if (!tempSensorTypeList.includes(device.sensorType)) {
-        tempSensorTypeList.push(device.sensorType);
-      }
-    }
-
     // Set the current time for from and to
     let fromTime: number = 0;
     let toTime: number = 0;
@@ -75,12 +35,12 @@ const LayoutBuilder = () => {
       offset: 0,
       thingId: [],
       status: "enabled",
-      name: tempSensorTypeList[0],
+      name: data.tempSensorTypeList[0],
       from: fromTime,
       to: toTime,
       publisher: "",
     };
-    for (const device of deviceList) {
+    for (const device of data.uniqueDeviceList) {
       const filterWithPublisher = { ...filterDevice, publisher: device.thingId };
       try {
         const historyData = await getHistoryList(device.channelId, filterWithPublisher);
@@ -103,7 +63,7 @@ const LayoutBuilder = () => {
       name: data.layout,
       imageUrl: "",
     };
-    saveDashboard(data, selectedLayout, deviceList);
+    saveDashboard(data, selectedLayout, data.uniqueDeviceList);
   };
 
   const saveDashboard = async (inputData: any, selectedLayout: any, deviceList: any[]) => {

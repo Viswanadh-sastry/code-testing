@@ -8,6 +8,9 @@ export async function getDashboardList(userId: string) {
 }
 
 export async function updateDashboard(userId: string, data: any) {
+    if (data.length === 0) {
+        data = [{ id: "", name: "", description: "", layout: "", data: { widgets: [] } }];
+    }
     const response = await axios.patch(`${API_URL}/users/${userId}/dashboards`, { dashboards: data });
     return response.data;
 }

@@ -27,7 +27,7 @@ const DashboardList = () => {
     enabled: !!userId,
   });
   const isLoading = dashboardListQuery.isLoading;
-  const data = useMemo(() => dashboardListQuery.data?.dashboards || [], [dashboardListQuery.data]);
+  const data = useMemo(() => dashboardListQuery.data?.dashboards.filter((row: Dashboard) => "id" in row && row.id !== "") || [], [dashboardListQuery.data]);
   const columns = useMemo(() => dashboardColumns, []);
   const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
     columns,
@@ -51,8 +51,6 @@ const DashboardList = () => {
   const onCloseAddDashboard = () => {
     setShowAddDashboard(false);
   };
-
-  console.log("dashboardListQuery", dashboardListQuery);
 
   return (
     <KTCard>

@@ -1,7 +1,10 @@
 import clsx from "clsx";
 import { useFormik } from "formik";
+import { toast } from "react-toastify";
 import * as Yup from "yup";
 import { KTIcon, toAbsoluteUrl, WidgetParameters } from "../../../../../../_metronic/helpers";
+import { getChannelThingList } from "../../../../channels/api/ChannelThingAPI";
+import { getThingChannelList } from "../../../../things/api/ThingChannelAPI";
 
 interface ICreateViewProps {
   selectedLayout: any;
@@ -29,13 +32,86 @@ const CreateView = ({ selectedLayout, onCloseAddChart, onGetPreviewWidgetList }:
       toDate: undefined,
       interval: "",
       layout: selectedLayout?.name,
+      uniqueDeviceList: [],
+      tempSensorTypeList: [],
     },
     validationSchema: chartSchema,
     onSubmit: async (values) => {
+      const isValid = await isValidateDevices();
+      if (!isValid) {
+        return;
+      }
       onGetPreviewWidgetList(values);
       onCloseAddChart();
     },
   });
+
+  const isValidateDevices = async () => {
+    const devices: any[] = formik.values.devices;
+    const isValid = devices.every((device: any) => device.deviceValue && device.sensorType);
+    if (!isValid) {
+      toast.error("Device and Sensor Type is required");
+      return false;
+    }
+    const filterGroupChannel = {
+      offset: 0,
+      limit: 100,
+      name: "",
+      status: "enabled",
+    };
+    const deviceList: any[] = [];
+    const tempSensorTypeList: string[] = [];
+    for (const device of devices) {
+      if (device.deviceLabel === "thing") {
+        const channelListByThingId = await getThingChannelList(device.deviceValue, filterGroupChannel);
+        if (channelListByThingId.groups) {
+          const groupsWithThingId = channelListByThingId.groups.map((group: any) => ({
+            channelId: group.id,
+            thingName: device.deviceName,
+            thingId: device.deviceValue,
+          }));
+          if (groupsWithThingId.length > 0) {
+            deviceList.push(groupsWithThingId[0]);
+          }
+        }
+      } else {
+        const channelListByGroupId = await getChannelThingList(device.deviceValue, filterGroupChannel);
+        if (channelListByGroupId.things) {
+          const groupsWithChannelId = channelListByGroupId.things.map((thing: any) => ({
+            channelId: device.deviceValue,
+            thingName: thing.name,
+            thingId: thing.id,
+          }));
+          deviceList.push(...groupsWithChannelId);
+        }
+      }
+      console.log("device.sensorType", device.sensorType);
+      if (!tempSensorTypeList.includes(device.sensorType)) {
+        tempSensorTypeList.push(device.sensorType);
+      }
+    }
+    const uniqueDeviceList = deviceList.filter((thing, index, self) => index === self.findIndex((t) => t.thingId === thing.thingId));
+    formik.setFieldValue("uniqueDeviceList", uniqueDeviceList);
+    formik.setFieldValue("tempSensorTypeList", tempSensorTypeList);
+    // if (uniqueDeviceList.length > 5) {
+    //   Swal.fire({
+    //     heightAuto: false,
+    //     icon: "warning",
+    //     title: "Create Widget",
+    //     text: "Are you sure you want to continue with more than 5 devices?",
+    //     showCancelButton: true,
+    //     confirmButtonText: "Yes",
+    //     confirmButtonColor: "#d33",
+    //     cancelButtonText: "No",
+    //   }).then((result) => {
+    //     console.log("result", result);
+    //     if (result.isConfirmed) {
+    //       return true;
+    //     }
+    //   });
+    // }
+    return true;
+  };
 
   return (
     <>
