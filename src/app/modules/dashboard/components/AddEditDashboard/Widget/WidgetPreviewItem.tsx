@@ -164,6 +164,9 @@ const WidgetPreviewItem = ({ widgetData }: IWidgetPreviewItemProps) => {
       }
     }
 
+    // order by unix time descending
+    allHistoryData.sort((a: any, b: any) => b.time - a.time);
+
     // Call getChartOptions function
     const chart = new ApexCharts(chartRef.current, getChartOptions(tempSensorTypeList[0], data, deviceList, allHistoryData));
     if (chart) {
@@ -223,6 +226,9 @@ const WidgetPreviewItem = ({ widgetData }: IWidgetPreviewItemProps) => {
         toast.error(error.message);
       }
     }
+
+    // order by unix time descending
+    allHistoryData.sort((a: any, b: any) => b.time - a.time);
 
     // Call getChartOptions function
     const chart = new ApexCharts(chartRef.current, getChartOptions(sensorType, inputData, deviceData, allHistoryData));

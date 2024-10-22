@@ -72,6 +72,7 @@ const EditView = ({ inputData, onClose, onEditView }: IEditViewProps) => {
             channelId: group.id,
             thingName: device.deviceName,
             thingId: device.deviceValue,
+            sensorType: device.sensorType,
           }));
           if (groupsWithThingId.length > 0) {
             deviceList.push(groupsWithThingId[0]);
@@ -84,16 +85,16 @@ const EditView = ({ inputData, onClose, onEditView }: IEditViewProps) => {
             channelId: device.deviceValue,
             thingName: thing.name,
             thingId: thing.id,
+            sensorType: device.sensorType,
           }));
           deviceList.push(...groupsWithChannelId);
         }
       }
-      console.log("device.sensorType", device.sensorType);
       if (!tempSensorTypeList.includes(device.sensorType)) {
         tempSensorTypeList.push(device.sensorType);
       }
     }
-    const uniqueDeviceList = deviceList.filter((thing, index, self) => index === self.findIndex((t) => t.thingId === thing.thingId));
+    const uniqueDeviceList = deviceList.filter((thing, index, self) => index === self.findIndex((t) => t.thingId === thing.thingId && t.sensorType === thing.sensorType));
     if (deviceList.length !== uniqueDeviceList.length) {
       toast.info("Duplicate device is not allowed");
       return false;

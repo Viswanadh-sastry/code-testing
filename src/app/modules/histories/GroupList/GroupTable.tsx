@@ -99,6 +99,9 @@ const GroupTable = () => {
         }
       }
 
+      // order by unix time descending
+      allHistoryData.sort((a: any, b: any) => b.time - a.time);
+
       return allHistoryData;
     },
     enabled: channelListByDeviceIdQuery.isSuccess && !!channelListByDeviceIdQuery.data, // Ensure channelListByThingIdQuery is successful

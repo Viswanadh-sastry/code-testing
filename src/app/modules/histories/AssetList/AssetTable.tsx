@@ -95,6 +95,10 @@ const AssetTable = () => {
               }
             }
           }
+
+          // order by unix time descending
+          channelList.sort((a: any, b: any) => b.time - a.time);
+
           return channelList;
         }
       }

@@ -87,7 +87,6 @@ const CreateView = ({ selectedLayout, onCloseAddChart, onGetPreviewWidgetList }:
           deviceList.push(...groupsWithChannelId);
         }
       }
-      console.log("device.sensorType", device.sensorType);
       if (!tempSensorTypeList.includes(device.sensorType)) {
         tempSensorTypeList.push(device.sensorType);
       }

@@ -170,7 +170,7 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
         for (let i = moment.utc(inputData.fromDate).startOf("day").valueOf(); i <= moment.utc(inputData.toDate).startOf("day").valueOf(); i += 86400000) {
             categories.push({
                 timeInFromTimestamp: i * 1000,
-                timeInToTimestamp: (i + 86400000) * 1000,
+                timeInToTimestamp: ((i + 86400000) * 1000) + 999,
                 timeInDisplay: moment.utc(i).format("DD/MM"),
             });
         }
@@ -178,7 +178,7 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
         for (let i = inputData.timeline - 1; i >= 0; i--) {
             categories.push({
                 timeInFromTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000,
-                timeInToTimestamp: moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).endOf("day").valueOf() * 1000,
+                timeInToTimestamp: (moment.utc(moment().subtract(i, "days").format("YYYY-MM-DD")).endOf("day").valueOf() * 1000) + 999,
                 timeInDisplay: moment().subtract(i, "days").format("DD/MM"),
             });
         }
@@ -188,8 +188,10 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
     const deviceData: any = deviceList.filter((device: any) => device.sensorType === sensorType);
 
     const series: any = [];
+    const seriesCount: any = [];
     deviceData.map((device: any) => {
         const categoryData: any = [];
+        const categoryCount: any = [];
         categories.map((category: any) => {
             // Filter messages per device and category (day)
             const data = messages.filter(
@@ -203,11 +205,16 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
 
             // For histogram, we use the count of messages
             categoryData.push(Number(average.toFixed(2)));
+            categoryCount.push(data.length);
         });
 
         series.push({
             name: device.thingName,
             data: categoryData,
+        });
+        seriesCount.push({
+            name: device.thingName,
+            data: categoryCount,
         });
     });
     console.log("deviceData", deviceData);
@@ -217,7 +224,7 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
     const { layout } = inputData;
     if (layout === "pie" || layout === "donut") {
         return {
-            series: series.map((series: any) => Number((series.data.reduce((a: number, b: number) => a + b, 0) / series.data.length).toFixed(2))),
+            series: seriesCount.map((series: any) => series.data.reduce((a: any, b: any) => a + b, 0)),
             chart: {
                 type: layout,
                 height: '80%',
@@ -262,7 +269,7 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
         };
     } else if (layout === "radialBar") {
         return {
-            series: series.map((series: any) => Number((series.data.reduce((a: number, b: number) => a + b, 0) / series.data.length).toFixed(2))),
+            series: seriesCount.map((series: any) => series.data.reduce((a: any, b: any) => a + b, 0)),
             chart: {
                 type: layout,
                 height: '80%',
@@ -348,13 +355,8 @@ const getChartOptions = (sensorType: string, inputData: any, deviceList: any, me
             },
         };
     } else if (layout === "polarArea") {
-        const seriesData = series.map((series: any) => {
-            // Ensure that we sum up valid numerical data for each device
-            return Number((series.data.reduce((a: number, b: number) => a + (b || 0), 0) / series.data.length).toFixed(2));
-        });
-
         return {
-            series: seriesData, // Pass the summed up data
+            series: seriesCount.map((series: any) => series.data.reduce((a: any, b: any) => a + b, 0)),
             chart: {
                 type: layout,
                 height: '80%',

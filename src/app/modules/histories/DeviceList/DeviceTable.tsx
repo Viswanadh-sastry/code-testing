@@ -104,6 +104,9 @@ const DeviceTable = () => {
         }
       }
 
+      // order by unix time descending
+      allHistoryData.sort((a: any, b: any) => b.time - a.time);
+
       return allHistoryData;
     },
     enabled: channelListByThingIdQuery.isSuccess && !!channelListByThingIdQuery.data,
