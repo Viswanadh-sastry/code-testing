@@ -204,7 +204,7 @@ const EditUser = () => {
               <span className="indicator-label">Enable User</span>
             </button>
           )}
-          {role === "admin" && (
+          {(role === "admin" || role === "administrator") && (
             <button type="button" className="btn btn-primary" onClick={() => setModal({ show: true, name: "role" })}>
               <span className="indicator-label">Update Role</span>
             </button>

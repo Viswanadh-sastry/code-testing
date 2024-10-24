@@ -20,6 +20,11 @@ export const convertUnixTimestampToLocalDateTime = (unixTimestamp: any) => {
         unixTimestamp = unixTimestamp * 1000000;
     }
 
+    // Check if the unixTimestamp length is 19 digits
+    if (unixTimestamp.toString().length === 19) {
+        unixTimestamp = unixTimestamp / 1000;
+    }
+
     // Convert from microseconds to milliseconds by dividing by 1,000
     const date = new Date(unixTimestamp / 1000);
 

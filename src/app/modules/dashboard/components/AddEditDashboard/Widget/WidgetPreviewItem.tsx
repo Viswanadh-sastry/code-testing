@@ -122,10 +122,10 @@ const WidgetPreviewItem = ({ widgetData }: IWidgetPreviewItemProps) => {
     let toTime: number = 0;
     if (data.timeline === "0") {
       fromTime = moment.utc(data.fromDate).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(data.toDate).endOf("day").valueOf() * 1000;
+      toTime = moment.utc(data.toDate).endOf("day").valueOf() * 1000 + 999;
     } else {
       fromTime = moment.utc(moment().subtract(data.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000;
+      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000 + 999;
     }
 
     const allHistoryData = [];
@@ -185,10 +185,10 @@ const WidgetPreviewItem = ({ widgetData }: IWidgetPreviewItemProps) => {
     let toTime: number = 0;
     if (inputData.timeline === "0") {
       fromTime = moment.utc(inputData.fromDate).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(inputData.toDate).endOf("day").valueOf() * 1000;
+      toTime = moment.utc(inputData.toDate).endOf("day").valueOf() * 1000 + 999;
     } else {
       fromTime = moment.utc(moment().subtract(inputData.timeline, "days").format("YYYY-MM-DD")).startOf("day").valueOf() * 1000;
-      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000;
+      toTime = moment.utc(moment().format("YYYY-MM-DD")).endOf("day").valueOf() * 1000 + 999;
     }
 
     const allHistoryData = [];

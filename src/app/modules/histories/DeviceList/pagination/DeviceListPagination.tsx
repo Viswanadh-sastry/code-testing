@@ -78,6 +78,7 @@ const DeviceListPagination = ({ deviceHistoryListQuery, currentPage, itemsPerPag
     updateState({ page, items_per_page: itemsPerPage });
   };
 
+  const PAGINATION_PAGES_COUNT = 10;
   const sliceLinks = (pagination?: PaginationState) => {
     if (!pagination?.links?.length) {
       return [];
@@ -94,19 +95,22 @@ const DeviceListPagination = ({ deviceHistoryListQuery, currentPage, itemsPerPag
     const previousLink: { label: string; active: boolean; url: string | null; page: number | null } = scopedLinks.shift()!;
     const nextLink: { label: string; active: boolean; url: string | null; page: number | null } = scopedLinks.pop()!;
 
-    const halfOfPagesCount = Math.floor(itemsPerPage / 2);
+    const halfOfPagesCount = Math.floor(PAGINATION_PAGES_COUNT / 2);
 
     pageLinks.push(previousLink);
 
-    if (pagination.page <= Math.round(itemsPerPage / 2) || scopedLinks.length <= itemsPerPage) {
-      pageLinks = [...pageLinks, ...scopedLinks.slice(0, itemsPerPage)];
+    if (pagination.page <= Math.round(PAGINATION_PAGES_COUNT / 2) || scopedLinks.length <= PAGINATION_PAGES_COUNT) {
+      pageLinks = [...pageLinks, ...scopedLinks.slice(0, PAGINATION_PAGES_COUNT)];
     }
 
-    if (pagination.page > scopedLinks.length - halfOfPagesCount && scopedLinks.length > itemsPerPage) {
-      pageLinks = [...pageLinks, ...scopedLinks.slice(scopedLinks.length - itemsPerPage, scopedLinks.length)];
+    if (pagination.page > scopedLinks.length - halfOfPagesCount && scopedLinks.length > PAGINATION_PAGES_COUNT) {
+      pageLinks = [...pageLinks, ...scopedLinks.slice(scopedLinks.length - PAGINATION_PAGES_COUNT, scopedLinks.length)];
     }
 
-    if (!(pagination.page <= Math.round(itemsPerPage / 2) || scopedLinks.length <= itemsPerPage) && !(pagination.page > scopedLinks.length - halfOfPagesCount)) {
+    if (
+      !(pagination.page <= Math.round(PAGINATION_PAGES_COUNT / 2) || scopedLinks.length <= PAGINATION_PAGES_COUNT) &&
+      !(pagination.page > scopedLinks.length - halfOfPagesCount)
+    ) {
       pageLinks = [...pageLinks, ...scopedLinks.slice(pagination.page - 1 - halfOfPagesCount, pagination.page + halfOfPagesCount)];
     }
 

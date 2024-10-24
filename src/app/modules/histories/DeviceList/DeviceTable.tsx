@@ -92,15 +92,28 @@ const DeviceTable = () => {
       const allHistoryData = [];
 
       for (const channel of channelList) {
-        const filterWithPublisher = { ...filterDevice, publisher: channel.thingId };
-
-        try {
-          const historyData = await getHistoryListAll(channel.id, filterWithPublisher);
-          if (historyData.messages) {
-            allHistoryData.push(...historyData.messages);
+        if (filterDevice.name && filterDevice.name.length > 0) {
+          for (const name of filterDevice.name) {
+            try {
+              const filterWithNameAndPublisher = { ...filterDevice, name: [name], publisher: channel.thingId };
+              const historyData = await getHistoryListAll(channel.id, filterWithNameAndPublisher);
+              if (historyData.messages) {
+                allHistoryData.push(...historyData.messages);
+              }
+            } catch (error: any) {
+              toast.error(error.message);
+            }
           }
-        } catch (error: any) {
-          toast.error(error.message);
+        } else {
+          try {
+            const filterWithPublisher = { ...filterDevice, publisher: channel.thingId };
+            const historyData = await getHistoryListAll(channel.id, filterWithPublisher);
+            if (historyData.messages) {
+              allHistoryData.push(...historyData.messages);
+            }
+          } catch (error: any) {
+            toast.error(error.message);
+          }
         }
       }
 

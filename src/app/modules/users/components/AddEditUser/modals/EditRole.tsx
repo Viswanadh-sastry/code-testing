@@ -68,8 +68,8 @@ const EditRole = ({ data, onClose, onDisplay }: IEditRoleProps) => {
                             className="form-check-input"
                             name="role"
                             id="role"
-                            checked={formik.values.role === "Admin"}
-                            onChange={() => formik.setFieldValue("role", "Admin")}
+                            checked={formik.values.role === "admin" || formik.values.role === "administrator"}
+                            onChange={() => formik.setFieldValue("role", "admin")}
                             onBlur={formik.handleBlur}
                             value={formik.values.role}
                           />

@@ -1,6 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import "jspdf-autotable";
 import { Dispatch, SetStateAction } from "react";
+import { Typeahead } from "react-bootstrap-typeahead";
 import { useNavigate } from "react-router-dom";
+import { getChannelListAll } from "../../../channels/api/ChannelsAPI";
 import { useSelectedValues } from "../../HistoryContext";
 
 interface IChannelsListHeaderProps {
@@ -17,6 +20,30 @@ interface IChannelsListHeaderProps {
 
 const ChannelsListHeader = ({ setFilterChannel }: IChannelsListHeaderProps) => {
   const navigate = useNavigate();
+
+  const filterChannel = {
+    limit: 100,
+    offset: 0,
+    name: "",
+    metadata: "",
+    status: "enabled",
+  };
+
+  // only call getChannelList api when the component is mounted
+  const channelListQuery = useQuery({
+    queryKey: [`channelList`, filterChannel],
+    queryFn: async () => getChannelListAll(filterChannel),
+    enabled: true,
+  });
+
+  // Get all unique asset types
+  const assetTypeList = Array.from(
+    new Set(
+      (channelListQuery.data?.groups.flatMap((channel: any) => channel.metadata?.Asset_Type) || [])
+        .filter((assetType: string | undefined) => assetType) // Filter out undefined, null, or empty asset types
+        .map((assetType: string) => assetType.trim()) // Normalize asset types by trimming and converting to lowercase
+    )
+  ).map((assetType) => ({ label: assetType }));
 
   const onChangeStatus = (e: any) => {
     setFilterChannel((prevState: any) => ({
@@ -39,7 +66,7 @@ const ChannelsListHeader = ({ setFilterChannel }: IChannelsListHeaderProps) => {
           <div className="d-flex align-items-center position-relative my-1">
             <input
               type="text"
-              className="form-control form-control form-control-lg mx-2"
+              className="form-control form-control form-control-lg w-300px"
               placeholder="Search"
               onChange={(e) =>
                 setFilterChannel((prevState: any) => ({
@@ -48,20 +75,19 @@ const ChannelsListHeader = ({ setFilterChannel }: IChannelsListHeaderProps) => {
                 }))
               }
             />
-            <input
-              type="text"
-              className="form-control form-control form-control-lg mx-2"
-              placeholder="Asset_Type"
-              onChange={(e) =>
+            <Typeahead
+              id="assetTypeList"
+              labelKey="label"
+              className="fw-bolder mx-2 w-200px"
+              onChange={(selected) => {
+                const selectedNames = selected.filter((option) => typeof option === "object" && option !== null).map((option: any) => option.label);
                 setFilterChannel((prevState: any) => ({
                   ...prevState,
-                  metadata: e.target.value
-                    ? `{
-                  "Asset_Type": "${e.target.value}"
-                  }`
-                    : "",
-                }))
-              }
+                  metadata: selectedNames.length > 0 ? `{"Asset_Type": "${selectedNames[0]}"}` : "",
+                }));
+              }}
+              options={assetTypeList}
+              placeholder="Asset Type"
             />
             <select className="form-select form-select-solid w-200px ps-8" onChange={onChangeStatus} defaultValue={"enabled"}>
               <option value="all">Status: all</option>

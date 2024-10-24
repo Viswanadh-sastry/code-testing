@@ -1,6 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { Dispatch, SetStateAction } from "react";
-import { useSelectedValues } from "../../HistoryContext";
+import { Typeahead } from "react-bootstrap-typeahead";
 import { useNavigate } from "react-router-dom";
+import { getThingListAll } from "../../../things/api/ThingAPI";
+import { useSelectedValues } from "../../HistoryContext";
 
 interface IThingsListHeaderProps {
   setFilterThing: Dispatch<
@@ -17,6 +20,30 @@ interface IThingsListHeaderProps {
 
 const ThingsListHeader = ({ setFilterThing }: IThingsListHeaderProps) => {
   const navigate = useNavigate();
+  const filterThing = {
+    limit: 100,
+    offset: 0,
+    name: "",
+    metadata: "",
+    tags: "",
+    status: "enabled",
+  };
+
+  const thingListQuery = useQuery({
+    queryKey: [`thingList`, filterThing],
+    queryFn: async () => getThingListAll(filterThing),
+    enabled: true,
+  });
+
+  // Get all unique device types
+  const deviceTypeList = Array.from(
+    new Set(
+      (thingListQuery.data?.things.flatMap((thing: any) => thing.metadata?.Device_Type) || [])
+        .filter((deviceType: string | undefined) => deviceType)
+        .map((deviceType: string) => deviceType.trim())
+    )
+  ).map((deviceType) => ({ label: deviceType }));
+
   const onChangeStatus = (e: any) => {
     setFilterThing((prevState: any) => ({
       ...prevState,
@@ -38,7 +65,7 @@ const ThingsListHeader = ({ setFilterThing }: IThingsListHeaderProps) => {
           <div className="d-flex align-items-center position-relative my-1">
             <input
               type="text"
-              className="form-control form-control form-control-lg mx-2"
+              className="form-control form-control form-control-lg w-300px"
               placeholder="Search"
               onChange={(e) =>
                 setFilterThing((prevState: any) => ({
@@ -46,6 +73,20 @@ const ThingsListHeader = ({ setFilterThing }: IThingsListHeaderProps) => {
                   name: e.target.value,
                 }))
               }
+            />
+            <Typeahead
+              id="deviceTypeList"
+              labelKey="label"
+              className="fw-bolder mx-2 w-200px"
+              onChange={(selected) => {
+                const selectedNames = selected.filter((option) => typeof option === "object" && option !== null).map((option: any) => option.label);
+                setFilterThing((prevState: any) => ({
+                  ...prevState,
+                  metadata: selectedNames.length > 0 ? `{"Device_Type": "${selectedNames[0]}"}` : "",
+                }));
+              }}
+              options={deviceTypeList}
+              placeholder="Device Type"
             />
             <select className="form-select form-select-solid w-200px ps-8" onChange={onChangeStatus} defaultValue={"enabled"}>
               <option value="all">Status: all</option>

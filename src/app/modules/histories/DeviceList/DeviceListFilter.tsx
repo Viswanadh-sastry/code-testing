@@ -25,15 +25,30 @@ interface TypeaheadMethods {
   clear: () => void;
 }
 
+const filterDevice = {
+  limit: 100,
+  offset: 0,
+  status: "enabled",
+};
+
 const DeviceListFilter = ({ setFilterDevice }: IDeviceListHeaderProps) => {
   const [filter, setFilter] = useState({ name: "", from: 0, to: 0 });
   const typeaheadRef = useRef<TypeaheadMethods | null>(null);
 
-  const filterDevice = {
-    limit: 100,
-    offset: 0,
-    status: "enabled",
-  };
+  const deviceListQuery = useQuery({
+    queryKey: [`deviceList`, filterDevice],
+    queryFn: async () => getThingListAll(filterDevice).catch((error) => toast.error(error.message)),
+    enabled: true,
+  });
+
+  // Extract and flatten the tags, then remove duplicates
+  const uniqueTags = Array.from(
+    new Set(
+      (deviceListQuery.data?.things.flatMap((thing: any) => thing.tags as string[]) || [])
+        .filter((tag: string | undefined) => tag) // Filter out undefined, null, or empty tags
+        .map((tag: string) => tag.trim()) // Normalize tags by trimming and converting to lowercase
+    )
+  ).map((tag) => ({ label: tag }));
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -57,21 +72,6 @@ const DeviceListFilter = ({ setFilterDevice }: IDeviceListHeaderProps) => {
       [name]: newValue,
     }));
   };
-
-  const deviceListQuery = useQuery({
-    queryKey: [`deviceList`, filterDevice],
-    queryFn: async () => getThingListAll(filterDevice).catch((error) => toast.error(error.message)),
-    enabled: true,
-  });
-
-  // Extract and flatten the tags, then remove duplicates
-  const uniqueTags = Array.from(
-    new Set(
-      (deviceListQuery.data?.things.flatMap((thing: any) => thing.tags as string[]) || [])
-        .filter((tag: string | undefined) => tag) // Filter out undefined, null, or empty tags
-        .map((tag: string) => tag.trim()) // Normalize tags by trimming and converting to lowercase
-    )
-  ).map((tag) => ({ label: tag }));
 
   const applyFilter = () => {
     if (filter.from != 0 && filter.to != 0) {
@@ -123,17 +123,18 @@ const DeviceListFilter = ({ setFilterDevice }: IDeviceListHeaderProps) => {
                 options={uniqueTags || []}
                 placeholder="Search Asset"
                 multiple={true}
+                data-kt-menu-dismiss="false"
                 ref={(ref) => {
                   typeaheadRef.current = ref as TypeaheadMethods;
                 }}
               />
             </div>
           </div>
-          <div className="mb-5 mt-2">
+          <div className="mt-2">
             <label className="form-label fs-6 fw-bold">From Date</label>
             <input type="date" className="form-control" name="from" onChange={handleChange} value={filter.from ? new Date(filter.from).toISOString().split("T")[0] : ""} />
           </div>
-          <div className="mb-5">
+          <div className="mt-2 mb-5">
             <label className="form-label fs-6 fw-bold">To Date</label>
             <input type="date" className="form-control" name="to" onChange={handleChange} value={filter.to ? new Date(filter.to).toISOString().split("T")[0] : ""} />
           </div>
