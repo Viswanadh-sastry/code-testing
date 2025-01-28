@@ -9,20 +9,35 @@ const subscriptionsColumns: ReadonlyArray<Column<Subscription>> = [
     accessor: "name",
   },
   {
-    Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Description" className="min-w-125px" />,
-    accessor: "description",
-  },
-  {
     Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Categories" className="min-w-125px" />,
     accessor: "categories",
+    Cell: ({ value }) => (
+      <>
+        {value?.map((label: string, index: number) => (
+          <div key={index} className="badge badge-light-primary fw-bolder me-2">
+            {label}
+          </div>
+        ))}
+      </>
+    ),
   },
   {
     Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Labels" className="min-w-125px" />,
     accessor: "labels",
+    Cell: ({ value }) => (
+      <>
+        {value?.map((label: string, index: number) => (
+          <div key={index} className="badge badge-light-primary fw-bolder me-2">
+            {label}
+          </div>
+        ))}
+      </>
+    ),
   },
   {
     Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Channels" className="min-w-125px" />,
     accessor: "channels",
+    Cell: ({ value }) => <div className="badge badge-light-primary fw-bolder me-2">{value?.length}</div>,
   },
   {
     Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Receiver" className="min-w-125px" />,
@@ -37,7 +52,7 @@ const subscriptionsColumns: ReadonlyArray<Column<Subscription>> = [
     accessor: "resendInterval",
   },
   {
-    Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Actions" className="text-end w-20px" />,
+    Header: (props) => <SubscriptionCustomHeader tableProps={props} title="Actions" className="text-end w-120px" />,
     id: "actions",
     Cell: ({ ...props }) => <SubscriptionActionsCell row={props.row} />,
   },

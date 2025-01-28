@@ -12,17 +12,21 @@ interface IEditSubscriptionProps {
 }
 
 const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionProps) => {
+  console.log("row", row);
+  const filterSubscription = {
+    limit: 10,
+    offset: 0,
+  };
   const subscriptionListQuery = useQuery({
-    queryKey: [`subscriptionList`],
-    queryFn: async () => getSubscriptionList(),
+    queryKey: [`subscriptionList`, filterSubscription],
+    queryFn: async () => getSubscriptionList(filterSubscription).catch((error) => toast.error(error.message)),
     enabled: false,
   });
   const subscriptionSchema = Yup.object().shape({
     name: Yup.string().required("Name is required"),
-    description: Yup.string(),
-    categories: Yup.string(),
-    labels: Yup.string(),
-    receiver: Yup.string(),
+    categories: Yup.string().required("Categories is required"),
+    labels: Yup.string().required("Labels is required"),
+    receiver: Yup.string().required("Receiver is required"),
     resendInterval: Yup.string(),
     resendLimit: Yup.number(),
     adminState: Yup.string(),
@@ -32,20 +36,52 @@ const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionPro
 
   const formik = useFormik({
     initialValues: {
-      name: row?.name || "",
-      description: row?.description || "",
-      categories: row?.categories || "",
-      labels: row?.labels || "",
-      receiver: row?.receiver || "",
-      resendInterval: row?.resendInterval || "",
-      resendLimit: row?.resendLimit || 0,
-      adminState: row?.adminState || "",
-      emailChannels: row?.emailChannels || [],
-      restChannels: row?.restChannels || [],
+      id: row?.original.id || "",
+      name: row?.original.name || "",
+      categories: row?.original.categories.join(",") || "",
+      labels: row?.original.labels.join(",") || "",
+      receiver: row?.original.receiver || "",
+      resendInterval: row?.original.resendInterval || "",
+      resendLimit: row?.original.resendLimit || 0,
+      adminState: row?.original.adminState || "",
+      emailChannels: row?.original.channels.filter((channel: any) => channel.type === "EMAIL").map((channel: any) => ({ emailRecipient: channel.recipients[0] })) || [],
+      restChannels: row?.original.channels.filter((channel: any) => channel.type === "REST") || [],
+      created: row?.original.created || "",
+      modified: row?.original.modified || "",
     },
     validationSchema: subscriptionSchema,
     onSubmit: async (values, { setSubmitting }) => {
-      updateSubscription(values)
+      if (values.emailChannels.length === 0 && values.restChannels.length === 0) {
+        toast.error("Please add at least one email or rest channel.");
+        return;
+      }
+      const emailChannels = values.emailChannels.map((emailChannel: any) => ({ type: "EMAIL", recipients: [emailChannel.emailRecipient] }));
+      const restChannels = values.restChannels.map((restChannel: any) => ({
+        type: "REST",
+        httpMethod: restChannel.httpMethod,
+        host: restChannel.host,
+        port: Number(restChannel.port),
+        path: restChannel.path,
+      }));
+      const data = [
+        {
+          apiVersion: "v3",
+          subscription: {
+            id: values.id,
+            name: values.name,
+            categories: [values.categories],
+            labels: [values.labels],
+            receiver: values.receiver,
+            resendInterval: values.resendInterval,
+            resendLimit: values.resendLimit,
+            adminState: values.adminState,
+            channels: values.emailChannels.length ? emailChannels : restChannels,
+            created: values.created,
+            modified: values.modified,
+          },
+        },
+      ];
+      updateSubscription(data)
         .then(() => {
           toast.success("Subscription updated successfully");
           onCloseEditSubscription();
@@ -58,7 +94,7 @@ const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionPro
 
   return (
     <>
-      <div className="modal fade show d-block" id="kt_modal_add_subscription" role="dialog" tabIndex={-1} aria-modal="true">
+      <div className="text-start modal fade show d-block" id="kt_modal_add_subscription" role="dialog" tabIndex={-1} aria-modal="true">
         {/* begin::Modal dialog */}
         <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable mw-900px mh-900px">
           {/* begin::Modal content */}
@@ -112,20 +148,28 @@ const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionPro
                     </div>
                   </div>
                   <div className="row">
-                    {/* Description */}
-                    <div className="col-md-12">
-                      <div className="fv-row mb-6">
-                        <label className="fw-bold fs-6 mb-2">Description</label>
-                        <textarea {...formik.getFieldProps("description")} name="description" placeholder="Enter description" className="form-control mb-3 mb-lg-0" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="row">
                     {/* Categories */}
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Categories</label>
-                        <input {...formik.getFieldProps("categories")} type="text" name="categories" placeholder="Enter categories" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("categories")}
+                          type="text"
+                          name="categories"
+                          placeholder="Enter categories"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.categories && formik.errors.categories },
+                            { "is-valid": formik.touched.categories && !formik.errors.categories }
+                          )}
+                        />
+                        {formik.touched.categories && formik.errors.categories && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{typeof formik.errors.categories === "string" ? formik.errors.categories : ""}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -134,7 +178,24 @@ const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionPro
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Labels</label>
-                        <input {...formik.getFieldProps("labels")} type="text" name="labels" placeholder="Enter labels" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("labels")}
+                          type="text"
+                          name="labels"
+                          placeholder="Enter labels"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.labels && formik.errors.labels },
+                            { "is-valid": formik.touched.labels && !formik.errors.labels }
+                          )}
+                        />
+                        {formik.touched.labels && formik.errors.labels && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{typeof formik.errors.labels === "string" ? formik.errors.labels : ""}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -143,7 +204,24 @@ const EditSubscription = ({ row, onCloseEditSubscription }: IEditSubscriptionPro
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Receiver</label>
-                        <input {...formik.getFieldProps("receiver")} type="text" name="receiver" placeholder="Enter receiver" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("receiver")}
+                          type="text"
+                          name="receiver"
+                          placeholder="Enter receiver"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.receiver && formik.errors.receiver },
+                            { "is-valid": formik.touched.receiver && !formik.errors.receiver }
+                          )}
+                        />
+                        {formik.touched.receiver && formik.errors.receiver && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{typeof formik.errors.receiver === "string" ? formik.errors.receiver : ""}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

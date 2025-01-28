@@ -12,19 +12,18 @@ interface INotificationListHeaderProps {
       to: number;
     }>
   >;
-  setNotificationList: Dispatch<SetStateAction<any>>;
 }
 
 interface TypeaheadMethods {
   clear: () => void;
 }
 
-const NotificationListFilter = ({ setFilterNotification, setNotificationList }: INotificationListHeaderProps) => {
+const NotificationListFilter = ({ setFilterNotification }: INotificationListHeaderProps) => {
   let ktThemeModeValue = localStorage.getItem("kt_theme_mode_value");
   if (ktThemeModeValue === "system") {
     ktThemeModeValue = ThemeModeComponent.getSystemMode() as "light" | "dark";
   }
-  const [filter, setFilter] = useState({ from: 0, to: 0, cleanupByAge: 0, cleanup: 0 });
+  const [filter, setFilter] = useState({ from: 0, to: 0 });
   const typeaheadRef = useRef<TypeaheadMethods | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,13 +56,11 @@ const NotificationListFilter = ({ setFilterNotification, setNotificationList }: 
         return;
       }
     }
-    setNotificationList([]);
-    setFilterNotification((prev) => ({ ...prev, ...filter, from: filter.from / 1000, to: filter.to / 1000 }));
+    setFilterNotification((prev) => ({ ...prev, ...filter, from: filter.from, to: filter.to }));
   };
 
   const resetFilter = () => {
-    setNotificationList([]);
-    setFilter({ from: 0, to: 0, cleanupByAge: 0, cleanup: 0 });
+    setFilter({ from: 0, to: 0 });
     setFilterNotification((prev) => ({ ...prev, from: 0, to: 0 }));
 
     // Clear the Typeahead input
@@ -74,7 +71,7 @@ const NotificationListFilter = ({ setFilterNotification, setNotificationList }: 
 
   return (
     <>
-      <button type="button" className="btn btn-light-primary me-3" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+      <button type="button" className="btn btn-light-primary me-2 mx-2" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
         <KTIcon iconName="filter" className="fs-2" />
         Filter
       </button>
@@ -103,28 +100,6 @@ const NotificationListFilter = ({ setFilterNotification, setNotificationList }: 
               name="to"
               onChange={handleChange}
               value={filter.to ? moment(filter.to).format("YYYY-MM-DD") : ""}
-              style={{ colorScheme: ktThemeModeValue || undefined }}
-            />
-          </div>
-          <div className="mb-5 mt-2">
-            <label className="form-label fs-6 fw-bold">Cleanup By Age</label>
-            <input
-              type="date"
-              className="form-control"
-              name="cleanupByAge"
-              onChange={handleChange}
-              value={filter.cleanupByAge ? new Date(filter.cleanupByAge).toISOString().split("T")[0] : ""}
-              style={{ colorScheme: ktThemeModeValue || undefined }}
-            />
-          </div>
-          <div className="mb-5 mt-2">
-            <label className="form-label fs-6 fw-bold">Cleanup</label>
-            <input
-              type="date"
-              className="form-control"
-              name="cleanup"
-              onChange={handleChange}
-              value={filter.cleanup ? new Date(filter.cleanup).toISOString().split("T")[0] : ""}
               style={{ colorScheme: ktThemeModeValue || undefined }}
             />
           </div>

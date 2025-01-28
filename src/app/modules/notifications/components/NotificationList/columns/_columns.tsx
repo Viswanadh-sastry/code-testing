@@ -10,11 +10,20 @@ const notificationsColumns: ReadonlyArray<Column<Notification>> = [
   },
   {
     Header: (props) => <NotificationCustomHeader tableProps={props} title="Asset" className="min-w-125px" />,
-    accessor: "asset",
+    accessor: "category",
   },
   {
     Header: (props) => <NotificationCustomHeader tableProps={props} title="Device" className="min-w-125px" />,
-    accessor: "device",
+    accessor: "labels",
+    Cell: ({ value }) => (
+      <>
+        {value?.map((label: string, index: number) => (
+          <div key={index} className="badge badge-light-primary fw-bolder me-2">
+            {label}
+          </div>
+        ))}
+      </>
+    ),
   },
   {
     Header: (props) => <NotificationCustomHeader tableProps={props} title="Content" className="min-w-125px" />,
@@ -38,12 +47,12 @@ const notificationsColumns: ReadonlyArray<Column<Notification>> = [
   },
   {
     Header: (props) => <NotificationCustomHeader tableProps={props} title="Created" className="min-w-125px" />,
-    accessor: "created_at",
+    accessor: "created",
     Cell: ({ value }) => convertGMTToLocalDateTime(value),
   },
   {
     Header: (props) => <NotificationCustomHeader tableProps={props} title="Modified" className="min-w-125px" />,
-    accessor: "updated_at",
+    accessor: "modified",
     Cell: ({ value }) => convertGMTToLocalDateTime(value),
   },
 ];

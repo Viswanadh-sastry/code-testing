@@ -13,10 +13,9 @@ interface IAddSubscriptionProps {
 const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAddSubscriptionProps) => {
   const subscriptionSchema = Yup.object().shape({
     name: Yup.string().required("Name is required"),
-    description: Yup.string(),
-    categories: Yup.string(),
-    labels: Yup.string(),
-    receiver: Yup.string(),
+    categories: Yup.string().required("Categories is required"),
+    labels: Yup.string().required("Labels is required"),
+    receiver: Yup.string().required("Receiver is required"),
     resendInterval: Yup.string(),
     resendLimit: Yup.number(),
     adminState: Yup.string(),
@@ -27,19 +26,45 @@ const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAdd
   const formik = useFormik({
     initialValues: {
       name: "",
-      description: "",
       categories: "",
       labels: "",
       receiver: "",
       resendInterval: "",
       resendLimit: 0,
-      adminState: "",
+      adminState: "UNLOCKED",
       emailChannels: [],
       restChannels: [],
     },
     validationSchema: subscriptionSchema,
     onSubmit: async (values, { setSubmitting }) => {
-      addSubscription(values)
+      if (values.emailChannels.length === 0 && values.restChannels.length === 0) {
+        toast.error("Please add at least one email or rest channel.");
+        return;
+      }
+      const emailChannels = values.emailChannels.map((emailChannel: any) => ({ type: "EMAIL", recipients: [emailChannel.emailRecipient] }));
+      const restChannels = values.restChannels.map((restChannel: any) => ({
+        type: "REST",
+        httpMethod: restChannel.httpMethod,
+        host: restChannel.host,
+        port: Number(restChannel.port),
+        path: restChannel.path,
+      }));
+      const data = [
+        {
+          apiVersion: "v3",
+          subscription: {
+            name: values.name,
+            categories: [values.categories],
+            labels: [values.labels],
+            receiver: values.receiver,
+            resendInterval: values.resendInterval,
+            resendLimit: values.resendLimit,
+            adminState: values.adminState,
+            channels: values.emailChannels.length ? emailChannels : restChannels,
+          },
+        },
+      ];
+      addSubscription(data)
         .then(() => {
           toast.success("Subscription created successfully");
           onCloseAddSubscription();
@@ -101,20 +126,28 @@ const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAdd
                     </div>
                   </div>
                   <div className="row">
-                    {/* Description */}
-                    <div className="col-md-12">
-                      <div className="fv-row mb-6">
-                        <label className="fw-bold fs-6 mb-2">Description</label>
-                        <textarea {...formik.getFieldProps("description")} name="description" placeholder="Enter description" className="form-control mb-3 mb-lg-0" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="row">
                     {/* Categories */}
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Categories</label>
-                        <input {...formik.getFieldProps("categories")} type="text" name="categories" placeholder="Enter categories" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("categories")}
+                          type="text"
+                          name="categories"
+                          placeholder="Enter categories"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.categories && formik.errors.categories },
+                            { "is-valid": formik.touched.categories && !formik.errors.categories }
+                          )}
+                        />
+                        {formik.touched.categories && formik.errors.categories && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{formik.errors.categories}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -123,7 +156,24 @@ const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAdd
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Labels</label>
-                        <input {...formik.getFieldProps("labels")} type="text" name="labels" placeholder="Enter labels" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("labels")}
+                          type="text"
+                          name="labels"
+                          placeholder="Enter labels"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.labels && formik.errors.labels },
+                            { "is-valid": formik.touched.labels && !formik.errors.labels }
+                          )}
+                        />
+                        {formik.touched.labels && formik.errors.labels && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{formik.errors.labels}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -132,7 +182,24 @@ const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAdd
                     <div className="col-md-12">
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Receiver</label>
-                        <input {...formik.getFieldProps("receiver")} type="text" name="receiver" placeholder="Enter receiver" className="form-control mb-3 mb-lg-0" />
+                        <input
+                          {...formik.getFieldProps("receiver")}
+                          type="text"
+                          name="receiver"
+                          placeholder="Enter receiver"
+                          className={clsx(
+                            "form-control mb-3 mb-lg-0",
+                            { "is-invalid": formik.touched.receiver && formik.errors.receiver },
+                            { "is-valid": formik.touched.receiver && !formik.errors.receiver }
+                          )}
+                        />
+                        {formik.touched.receiver && formik.errors.receiver && (
+                          <div className="fv-plugins-message-container">
+                            <div className="fv-help-block">
+                              <span role="alert">{formik.errors.receiver}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -166,8 +233,8 @@ const AddSubscription = ({ onCloseAddSubscription, onGetSubscriptionList }: IAdd
                       <div className="fv-row mb-6">
                         <label className="fw-bold fs-6 mb-2">Admin State</label>
                         <select {...formik.getFieldProps("adminState")} className="form-select form-select-lg">
-                          <option value="UNLOCKED">Unlocked</option>
-                          <option value="LOCKED">Locked</option>
+                          <option value="UNLOCKED">UNLOCKED</option>
+                          <option value="LOCKED">LOCKED</option>
                         </select>
                       </div>
                     </div>

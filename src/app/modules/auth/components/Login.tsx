@@ -6,11 +6,13 @@ import { useFormik } from "formik";
 import { login } from "../core/_requests";
 import * as domainHelper from "../core/DomainHelpers";
 import * as credHelper from "../core/CredentialHelpers";
+import * as vaultHelper from "../core/VaultHelpers";
 import { toAbsoluteUrl } from "../../../../_metronic/helpers";
 import { ThemeModeComponent } from "../../../../_metronic/assets/ts/layout";
+// import { getJWTToken, getVaultToken } from "../../users/api/VaultAPI";
 
 const loginSchema = Yup.object().shape({
-  identity: Yup.string().email("Wrong email format").min(3, "Minimum 3 symbols").max(50, "Maximum 50 symbols").required("Email is required"),
+  identity: Yup.string().min(3, "Minimum 3 symbols").max(50, "Maximum 50 symbols").required("Email/Username is required"),
   secret: Yup.string().min(3, "Minimum 3 symbols").max(50, "Maximum 50 symbols").required("Password is required"),
 });
 
@@ -37,6 +39,18 @@ export function Login() {
         if (!auth.access_token) {
           throw new Error("No access token found");
         }
+        // const vault = await getVaultToken({ username: values.identity, password: values.secret });
+        // if (!vault.auth.client_token) {
+        //   throw new Error("No client token found");
+        // }
+        // const vaultToken = await getJWTToken(values.identity);
+        // if (!vaultToken.token) {
+        //   throw new Error("No token found");
+        // }
+        // vaultHelper.setVaultToken(vault);
+        vaultHelper.setVaultToken(
+          "eyJhbGciOiJFUzM4NCIsImtpZCI6IjgzNzMzMmJlLWVjODEtNjc2Mi01MGQ5LTA3YWQxZWE1NjQzZCJ9.eyJhdWQiOiJlZGdleCIsImV4cCI6MTczNzk2MTgwNSwiaWF0IjoxNzM3OTU0NjY1LCJpc3MiOiIvdjEvaWRlbnRpdHkvb2lkYyIsIm5hbWUiOiJleDEiLCJuYW1lc3BhY2UiOiJyb290Iiwic3ViIjoiYTg3MTA5MjAtNjEwZS02MTllLWEzNTQtYWU5M2Y3ZGY0NDEwIn0._ASuIrVZXs-WSiofqAAxpy0qASBnJr8ta24BaeHjYkXWsML66dg-gcAamw9z8TboLMw-qkzWKQNt4lvbGozIC8SCE9z7YV7W4cE2fVqvlHa0itcxbtWWHoDqdOh8f1OI"
+        );
         domainHelper.setDAuth(auth);
         credHelper.setCred(values);
         navigate("/domain/list");
@@ -65,7 +79,7 @@ export function Login() {
         </Link>
         {/* end::Logo */}
         <h1 className="text-gray-900 fw-bolder mb-3">Sign In</h1>
-        <div className="text-gray-500 fw-semibold fs-6">Sign in with email</div>
+        <div className="text-gray-500 fw-semibold fs-6">Sign in with email/username</div>
       </div>
       {/* begin::Heading */}
 
@@ -77,9 +91,9 @@ export function Login() {
 
       {/* begin::Form group */}
       <div className="fv-row mb-8">
-        <label className="form-label fs-6 fw-bolder text-gray-900">Email</label>
+        <label className="form-label fs-6 fw-bolder text-gray-900">Email/Username</label>
         <input
-          placeholder="Email"
+          placeholder="Email/Username"
           {...formik.getFieldProps("identity")}
           className={clsx(
             "form-control bg-transparent",
@@ -88,7 +102,7 @@ export function Login() {
               "is-valid": formik.touched.identity && !formik.errors.identity,
             }
           )}
-          type="email"
+          type="text"
           name="identity"
           autoComplete="off"
         />

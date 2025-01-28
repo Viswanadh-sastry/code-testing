@@ -3,7 +3,7 @@ name: "honeycomb"
 
 services:
   honeycomb:
-    image: mdlmagistrala/honeycomb:latest
+    image: mdlabs/honeycomb:latest
     container_name: honeycomb
     ports:
       - "3000:3000"

@@ -1,6 +1,9 @@
 import clsx from "clsx";
-import { useEffect, useMemo } from "react";
+import { toast } from "react-toastify";
+import { useQuery } from "@tanstack/react-query";
 import { PaginationState } from "../../../../../../_metronic/helpers";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { getSubscriptionList } from "../../../api/SubscriptionAPI";
 
 const mappedLabel = (label: string): string => {
   if (label === "&laquo; Previous") {
@@ -15,49 +18,51 @@ const mappedLabel = (label: string): string => {
 };
 
 interface ISubscriptionListPaginationProps {
-  subscriptionList: any[];
-  itemsPerPage: any;
-  pagination: PaginationState;
-  data: any;
-  setCurrentPage: (page: number) => void;
-  setItemsPerPage: (itemsPerPage: any) => void;
-  setPagination: (pagination: PaginationState) => void;
-  setData: (data: any) => void;
+  filterSubscription: any;
+  setFilterSubscription: Dispatch<
+    SetStateAction<{
+      limit: number;
+      offset: number;
+    }>
+  >;
 }
 
-const SubscriptionListPagination = ({
-  subscriptionList,
-  itemsPerPage,
-  pagination,
-  data,
-  setCurrentPage,
-  setItemsPerPage,
-  setPagination,
-  setData,
-}: ISubscriptionListPaginationProps) => {
-  useEffect(() => {
-    getLinks();
-  }, [data]);
+const SubscriptionListPagination = ({ filterSubscription, setFilterSubscription }: ISubscriptionListPaginationProps) => {
+  const [pagination, setPagination] = useState<PaginationState>({
+    page: 1,
+    items_per_page: filterSubscription.limit,
+    links: [],
+  });
+  const subscriptionListQuery = useQuery({
+    queryKey: [`subscriptionList`, filterSubscription],
+    queryFn: async () => getSubscriptionList(filterSubscription).catch((error) => toast.error(error.message)),
+    enabled: false,
+  });
+  const isLoading = subscriptionListQuery.isLoading;
 
-  const getLinks = () => {
-    const noOfLinks = subscriptionList.length;
-    const noOfPages = Math.ceil(noOfLinks / itemsPerPage);
-    const links = [];
-    links.push({ label: "&laquo; Previous", active: false, url: null, page: pagination.page === 1 ? null : pagination.page - 1 });
-    for (let i = 1; i <= noOfPages; i++) {
-      links.push({ label: i.toString(), active: false, url: null, page: i });
+  useEffect(() => {
+    if (subscriptionListQuery.data) {
+      const noOfLinks = subscriptionListQuery.data.totalCount;
+      const noOfPages = Math.ceil(noOfLinks / filterSubscription.limit);
+      const links = [];
+      links.push({ label: "&laquo; Previous", active: false, url: null, page: pagination.page === 1 ? null : pagination.page - 1 });
+      for (let i = 1; i <= noOfPages; i++) {
+        links.push({ label: i.toString(), active: false, url: null, page: i });
+      }
+      links.push({ label: "Next &raquo;", active: false, url: null, page: pagination.page === noOfPages ? null : pagination.page + 1 });
+      setPagination({
+        ...pagination,
+        links,
+      });
     }
-    links.push({ label: "Next &raquo;", active: false, url: null, page: pagination.page === noOfPages ? null : pagination.page + 1 });
-    setPagination({
-      ...pagination,
-      links,
-    });
-  };
+  }, [subscriptionListQuery.data]);
 
   const onChangePageSize = (e: any) => {
-    setItemsPerPage(e.target.value);
-    setCurrentPage(1);
-    setPagination({ ...pagination, page: 1, items_per_page: e.target.value });
+    setFilterSubscription((prevState: any) => ({
+      ...prevState,
+      limit: parseInt(e.target.value),
+      offset: 0,
+    }));
   };
 
   const updateState = (state: any) => {
@@ -66,21 +71,21 @@ const SubscriptionListPagination = ({
       page: state.page,
       items_per_page: state.items_per_page,
     });
-    const historyData = subscriptionList.filter((_: any, index: number) => {
-      return index >= (state.page - 1) * state.items_per_page && index < state.page * state.items_per_page;
-    });
-    setItemsPerPage(state.items_per_page);
-    setData(historyData);
+    setFilterSubscription((prevState: any) => ({
+      ...prevState,
+      offset: state.items_per_page * (state.page - 1),
+      limit: state.items_per_page,
+    }));
   };
 
   const updatePage = (page: number | undefined | null) => {
-    if (!page || pagination.page === page) {
+    if (!page || isLoading || pagination.page === page) {
       return;
     }
-    updateState({ page, items_per_page: itemsPerPage });
+    updateState({ page, items_per_page: filterSubscription.limit });
   };
 
-  const PAGINATION_PAGES_COUNT = 10;
+  const PAGINATION_PAGES_COUNT = filterSubscription.limit;
   const sliceLinks = (pagination?: PaginationState) => {
     if (!pagination?.links?.length) {
       return [];
@@ -125,7 +130,7 @@ const SubscriptionListPagination = ({
 
   return (
     <div className="row">
-      <div className="col-sm-12 col-md-4 d-flex align-items-center justify-content-center justify-content-md-start">
+      <div className="col-sm-12 col-md-5 d-flex align-items-center justify-content-center justify-content-md-start">
         <select className="form-select form-select-solid w-90px ps-8 me-2" onChange={onChangePageSize}>
           <option value="10">10</option>
           <option value="20">20</option>
@@ -134,15 +139,15 @@ const SubscriptionListPagination = ({
           <option value="50">50</option>
         </select>
         <div id="kt_table_subscriptions_info" className="dataTables_info">
-          Total {subscriptionList.length || 0} subscriptions
+          {isLoading ? "Loading..." : `Total ${subscriptionListQuery.data?.totalCount || 0} subscriptions`}
         </div>
       </div>
-      <div className="col-sm-12 col-md-8 d-flex align-items-center justify-content-center justify-content-md-end">
+      <div className="col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end">
         <div id="kt_table_subscriptions_paginate">
           <ul className="pagination">
             <li
               className={clsx("page-item", {
-                disabled: pagination.page === 1,
+                disabled: isLoading || pagination.page === 1,
               })}
             >
               <a onClick={() => updatePage(1)} style={{ cursor: "pointer" }} className="page-link">
@@ -158,6 +163,7 @@ const SubscriptionListPagination = ({
                   key={link.label}
                   className={clsx("page-item", {
                     active: pagination.page === link.page,
+                    disabled: isLoading,
                     previous: link.label === "Previous",
                     next: link.label === "Next",
                   })}
@@ -176,7 +182,7 @@ const SubscriptionListPagination = ({
               ))}
             <li
               className={clsx("page-item", {
-                disabled: pagination.page === (pagination.links?.length || 3) - 2,
+                disabled: isLoading || pagination.page === (pagination.links?.length || 3) - 2,
               })}
             >
               <a onClick={() => updatePage((pagination.links?.length || 3) - 2)} style={{ cursor: "pointer" }} className="page-link">
