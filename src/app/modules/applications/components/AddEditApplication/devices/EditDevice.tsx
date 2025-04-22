@@ -2,17 +2,31 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useFormik } from "formik";
 import moment from "moment";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 import * as Yup from "yup";
 import { KTCardBody, TagInputFields, VariableInputFields } from "../../../../../../_metronic/helpers";
 import { getLORAAuth } from "../../../../auth/core/LORAHelpers";
 import { getDeviceProfile } from "../../../../device-profiles/api/DeviceProfileAPI";
 import { Device } from "../../../api/_models";
-import { createKeysById, deleteKeysById, getDeviceById, getKeysById, getLinkMetrics, resetKeyRotation, syncTime, updateDevice, updateFrequency } from "../../../api/DeviceAPI";
+import {
+  createKeysById,
+  deleteKeysById,
+  deviceStatus,
+  getDeviceById,
+  getKeysById,
+  getLinkMetrics,
+  logLevel,
+  rebootDevice,
+  resetDevice,
+  resetKeyRotation,
+  syncTime,
+  updateDevice,
+  updateFrequency,
+} from "../../../api/DeviceAPI";
 import { LinkMetrics } from "./LinkMetrics";
-import Swal from "sweetalert2";
 
 const EditDevice = () => {
   const navigate = useNavigate();
@@ -54,6 +68,31 @@ const EditDevice = () => {
   });
   const metrics = useMemo(() => linkMetrics.data || null, [linkMetrics.data]);
 
+  useEffect(() => {
+    const navLinks = document.querySelectorAll("#lnkKeys .nav-link");
+    document.getElementById("divActions")?.style.setProperty("display", "none");
+
+    const handleClick = (event: Event) => {
+      const text = (event.target as HTMLElement).textContent?.trim();
+      if (text === "Dashboard" || text === "Download Links") {
+        document.getElementById("divActions")?.style.setProperty("display", "none");
+      } else {
+        document.getElementById("divActions")?.style.setProperty("display", "block");
+      }
+    };
+
+    navLinks.forEach((link) => {
+      link.addEventListener("click", handleClick);
+    });
+
+    // Cleanup
+    return () => {
+      navLinks.forEach((link) => {
+        link.removeEventListener("click", handleClick);
+      });
+    };
+  }, []);
+
   const eui64Regex = /^(?:[0-9A-Fa-f]{2}([-:])?){7}[0-9A-Fa-f]{2}$/;
   const deviceSchema = Yup.object().shape({
     devEui: Yup.string().required("Device EUI is required").matches(eui64Regex, "Invalid EUI64 format"),
@@ -83,7 +122,7 @@ const EditDevice = () => {
     validationSchema: deviceSchema,
     onSubmit: async (values, { setSubmitting }) => {
       // if keys tab is active
-      if ((document.querySelector("#lnkKeys.nav-link.active")?.textContent?.trim() ?? "") === "OTAA Keys") {
+      if ((document.querySelector("#lnkKeys .nav-link.active")?.textContent?.trim() ?? "") === "OTAA Keys") {
         if (!values.nwkKey) {
           toast.warn("Network key is required");
           setSubmitting(false);
@@ -200,13 +239,128 @@ const EditDevice = () => {
       },
     }).then((result) => {
       if (result.isConfirmed) {
+        // Check if the input is a number with positive value
+        if (isNaN(result.value) || result.value <= 0) {
+          toast.error("Please enter a valid positive number for frequency");
+          return;
+        }
         const data = {
-          update_frequency: result.value,
+          update_frequency: Number(result.value),
           dev_euid: formik.values.devEui,
         };
         updateFrequency(data)
           .then(() => {
             toast.success("Frequency updated successfully");
+          })
+          .catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
+      }
+    });
+  };
+
+  const onClickRebootDevice = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Are you sure you want to reboot device?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, reboot it!",
+      cancelButtonText: "Cancel",
+      customClass: {
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-secondary",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const data = {
+          dev_euid: formik.values.devEui,
+        };
+        rebootDevice(data)
+          .then(() => {
+            toast.success("Device rebooted successfully");
+          })
+          .catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
+      }
+    });
+  };
+
+  const onClickDeviceStatus = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Are you sure you want to get device status?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, get it!",
+      cancelButtonText: "Cancel",
+      customClass: {
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-secondary",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const data = {
+          dev_euid: formik.values.devEui,
+        };
+        deviceStatus(data)
+          .then(() => {
+            toast.success("Device status retrieved successfully");
+          })
+          .catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
+      }
+    });
+  };
+
+  const onClickLogLevel = () => {
+    Swal.fire({
+      title: "Log Level",
+      input: "select",
+      inputOptions: {
+        debug: "Debug",
+        info: "Info",
+        warn: "Warn",
+        error: "Error",
+      },
+      showCancelButton: true,
+      confirmButtonText: "Update",
+      cancelButtonText: "Cancel",
+      customClass: {
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-secondary",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const data = {
+          dev_euid: formik.values.devEui,
+          level: result.value === "info" ? 1 : result.value === "debug" ? 2 : result.value === "warn" ? 3 : 4,
+        };
+        logLevel(data)
+          .then(() => {
+            toast.success("Log level updated successfully");
+          })
+          .catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
+      }
+    });
+  };
+
+  const onClickResetDevice = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Are you sure you want to reset device?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, reset it!",
+      cancelButtonText: "Cancel",
+      customClass: {
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-secondary",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const data = {
+          dev_euid: formik.values.devEui,
+        };
+        resetDevice(data)
+          .then(() => {
+            toast.success("Device reset successfully");
           })
           .catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
       }
@@ -242,7 +396,7 @@ const EditDevice = () => {
   return (
     <KTCardBody className="py-4">
       <form className="form" onSubmit={formik.handleSubmit} noValidate>
-        <ul className="nav nav-tabs nav-line-tabs mb-5 fs-6">
+        <ul id="lnkKeys" className="nav nav-tabs nav-line-tabs mb-5 fs-6">
           <li className="nav-item">
             <a className="nav-link active" data-bs-toggle="tab" href="#kt_tab_dashboard">
               Dashboard
@@ -614,9 +768,9 @@ const EditDevice = () => {
                             <h4 className="text-gray-900 fw-bold">Device Reboot</h4>
                             <div className="fs-6 text-gray-700 pe-7">Endpoint to send downlink data for device reboot.</div>
                           </div>
-                          <a href="#" className="btn btn-dark px-6 align-self-center text-nowrap">
+                          <button type="button" className="btn btn-dark px-6 align-self-center text-nowrap" onClick={onClickRebootDevice}>
                             Proceed{" "}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -632,9 +786,9 @@ const EditDevice = () => {
                             <h4 className="text-gray-900 fw-bold">Device Status</h4>
                             <div className="fs-6 text-gray-700 pe-7">Endpoint to send downlink data for device status.</div>
                           </div>
-                          <a href="#" className="btn btn-info px-6 align-self-center text-nowrap">
+                          <button type="button" className="btn btn-info px-6 align-self-center text-nowrap" onClick={onClickDeviceStatus}>
                             Proceed{" "}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -650,9 +804,9 @@ const EditDevice = () => {
                             <h4 className="text-gray-900 fw-bold">Log Level</h4>
                             <div className="fs-6 text-gray-700 pe-7">Endpoint to set the logging level.</div>
                           </div>
-                          <a href="#" className="btn btn-primary px-6 align-self-center text-nowrap">
+                          <button type="button" className="btn btn-primary px-6 align-self-center text-nowrap" onClick={onClickLogLevel}>
                             Proceed{" "}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -686,9 +840,9 @@ const EditDevice = () => {
                             <h4 className="text-gray-900 fw-bold">Reset Device</h4>
                             <div className="fs-6 text-gray-700 pe-7">Endpoint to send downlink data for device reset. (factory reset)</div>
                           </div>
-                          <a href="#" className="btn btn-danger px-6 align-self-center text-nowrap">
+                          <button type="button" className="btn btn-danger px-6 align-self-center text-nowrap" onClick={onClickResetDevice}>
                             Proceed{" "}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -700,7 +854,7 @@ const EditDevice = () => {
         </div>
 
         {/* begin::Actions */}
-        <div className="text-center pt-15">
+        <div id="divActions" className="text-center pt-15">
           <button type="reset" onClick={onCloseBackEditDevice} className="btn btn-light me-3" data-kt-subscription-modal-action="cancel" disabled={formik.isSubmitting}>
             Back
           </button>

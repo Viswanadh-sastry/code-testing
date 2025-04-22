@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import { getUserDetails, loginWithDomain } from "../../../../app/modules/auth/core/_requests";
@@ -10,11 +10,12 @@ import { getDomain, removeDAuth, setDomain } from "../../../../app/modules/auth/
 import { setRole } from "../../../../app/modules/auth/core/RoleHelpers";
 import { getDomainListAll } from "../../../../app/modules/domain/api/DomainAPI";
 import { KTIcon, toAbsoluteUrl } from "../../../helpers";
-import { HeaderUserMenu, ThemeModeSwitcher } from "../../../partials";
+import { HeaderNotificationsMenu, HeaderUserMenu, ThemeModeSwitcher } from "../../../partials";
 import { useLayout } from "../../core";
+import { getNotification } from "../../../../app/modules/notifications/api/NotificationAPI";
 
 const itemClass = "ms-1 ms-md-4";
-// const btnClass = "btn btn-icon btn-custom btn-icon-muted btn-active-light btn-active-color-primary w-35px h-35px";
+const btnClass = "btn btn-icon btn-custom btn-icon-muted btn-active-light btn-active-color-primary w-35px h-35px";
 const userAvatarClass = "symbol-35px";
 const btnIconClass = "fs-2";
 
@@ -36,6 +37,23 @@ const Navbar = () => {
   });
   // const isLoading = domainListQuery.isLoading;
   const data = useMemo(() => domainListQuery.data?.domains || [], [domainListQuery.data]);
+
+  const [filterNotification, setFilterNotification] = useState({
+    limit: 5,
+    offset: 0,
+    status: "",
+    from: 0,
+    to: 0,
+  });
+  const notificationListQuery = useQuery({
+    queryKey: [`notificationList`, filterNotification],
+    queryFn: async () => getNotification(filterNotification).catch((error) => toast.error(error?.response?.data?.message || "Something went wrong")),
+    enabled: !!filterNotification.status,
+  });
+  const notificationList = useMemo(() => notificationListQuery.data?.notifications || [], [notificationListQuery.data]);
+  const displayNotifications = () => {
+    setFilterNotification({ ...filterNotification, status: "NEW" });
+  };
 
   const onSelectOrganization = (domainId: string, domainName: string, permission: string) => {
     Swal.fire({
@@ -89,42 +107,50 @@ const Navbar = () => {
   return (
     <div className="app-navbar flex-shrink-0">
       {name && (
-        <div className={clsx("app-navbar-item", itemClass)}>
-          {/* begin::Label */}
-          {/* <span className="fs-7 fw-bolder text-gray-700 pe-4 text-nowrap d-none d-xxl-block">Organization:</span> */}
-          {/* end::Label */}
+        <>
+          <div className={clsx("app-navbar-item", itemClass)}>
+            {/* begin::Label */}
+            {/* <span className="fs-7 fw-bolder text-gray-700 pe-4 text-nowrap d-none d-xxl-block">Organization:</span> */}
+            {/* end::Label */}
 
-          {/* Label value */}
-          {/* <span className="fs-7 fw-bold text-gray-500 text-nowrap d-none d-xxl-block">{name}</span> */}
-          {/* end::Label value */}
-          <a
-            href="#"
-            className={clsx("btn btn-light btn-active-light-primary btn-sm ", "btn-active-light-primary btn-custom")}
-            data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
-            data-kt-menu-attach="parent"
-            data-kt-menu-placement="bottom-end"
-          >
-            {name}&nbsp;
-            <KTIcon iconName="down" className="fs-5 m-0" />
-          </a>
-          {/* begin::Menu */}
-          <div
-            className="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-muted menu-active-bg menu-state-primary fw-semibold py-4 fs-base w-200px"
-            data-kt-menu="true"
-          >
-            {data.map((domain: any) => (
-              <div className="menu-item px-3" key={domain.id}>
-                <a className={clsx("menu-link px-3", { active: id === domain.id })} onClick={() => onSelectOrganization(domain.id, domain.name, domain.permission)}>
-                  {/* {domain.name} */}
-                  <span className="menu-icon" data-kt-element="icon">
-                    <KTIcon iconName="element-6" className="fs-1" />
-                  </span>
-                  <span className="menu-title">{domain.name}</span>
-                </a>
-              </div>
-            ))}
+            {/* Label value */}
+            {/* <span className="fs-7 fw-bold text-gray-500 text-nowrap d-none d-xxl-block">{name}</span> */}
+            {/* end::Label value */}
+            <a
+              href="#"
+              className={clsx("btn btn-light btn-active-light-primary btn-sm ", "btn-active-light-primary btn-custom")}
+              data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+              data-kt-menu-attach="parent"
+              data-kt-menu-placement="bottom-end"
+            >
+              {name}&nbsp;
+              <KTIcon iconName="down" className="fs-5 m-0" />
+            </a>
+            {/* begin::Menu */}
+            <div
+              className="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-muted menu-active-bg menu-state-primary fw-semibold py-4 fs-base w-200px"
+              data-kt-menu="true"
+            >
+              {data.map((domain: any) => (
+                <div className="menu-item px-3" key={domain.id}>
+                  <a className={clsx("menu-link px-3", { active: id === domain.id })} onClick={() => onSelectOrganization(domain.id, domain.name, domain.permission)}>
+                    {/* {domain.name} */}
+                    <span className="menu-icon" data-kt-element="icon">
+                      <KTIcon iconName="element-6" className="fs-1" />
+                    </span>
+                    <span className="menu-title">{domain.name}</span>
+                  </a>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+          <div className={clsx("app-navbar-item", itemClass)}>
+            <div data-kt-menu-trigger="{default: 'click'}" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end" className={btnClass} onClick={displayNotifications}>
+              <KTIcon iconName="notification" className={btnIconClass} />
+            </div>
+            <HeaderNotificationsMenu filterNotification={filterNotification} setFilterNotification={setFilterNotification} notificationList={notificationList} />
+          </div>
+        </>
       )}
       {/* <div className={clsx("app-navbar-item align-items-stretch", itemClass)}>
         <Search />

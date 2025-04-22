@@ -182,6 +182,11 @@
 <li>Enforces code style and best practices, integrated with Prettier for formatting.</li>
 </ul>
 </li>
+<li><strong>Charting Library</strong>: ApexCharts
+<ul>
+<li>ApexCharts is used for rendering interactive charts and data visualizations in the dashboard and analytics widgets.</li>
+</ul>
+</li>
 </ul>
 <h2 id="routing-flow">Routing Flow</h2>
 <p>The application separates routes into public (unauthenticated) and private (authenticated) flows. Public routes (e.g., login, forgot password) are accessible to all users, while private routes (e.g., dashboard, profile) require authentication and are guarded by token checks.</p>
@@ -307,6 +312,63 @@ History --&gt;|Charts/Alerts| Auth
   );
 }
 </code></pre>
+<h2 id="token-expiry-management-and-ui-handling">Token Expiry Management and UI Handling</h2>
+<h3 id="token-expiry-management">Token Expiry Management</h3>
+<ul>
+<li><strong>Short-lived Access Tokens</strong>: The application uses short-lived access tokens for API calls. When an access token expires, a refresh token is used to obtain a new access token without requiring the user to re-authenticate.</li>
+<li><strong>Refresh Token Rotation</strong>: Each time a refresh token is used, a new refresh token is issued and stored, reducing the risk of replay attacks.</li>
+<li><strong>Silent Refresh</strong>: The frontend automatically attempts to renew tokens before expiry using a silent refresh mechanism, ensuring a seamless user experience.</li>
+</ul>
+<h3 id="ui-handling-of-token-expiration">UI Handling of Token Expiration</h3>
+<ul>
+<li><strong>Axios Interceptors</strong>: All HTTP requests are made through a shared Axios instance configured with interceptors.
+<ul>
+<li><strong>Request Interceptor</strong>: Injects the current access token into the <code>Authorization</code> header of each request.</li>
+<li><strong>Response Interceptor</strong>: Intercepts <code>401 Unauthorized</code> responses. If a request fails due to an expired token and hasn't already been retried, the interceptor attempts to refresh the token and retry the original request.</li>
+</ul>
+</li>
+<li><strong>Automatic Logout</strong>: If the refresh token is also expired or invalid, the user is automatically logged out and redirected to the login page.</li>
+<li><strong>User Feedback</strong>: When a session expires, the UI may display a notification or modal indicating that the session has ended and prompting the user to log in again.</li>
+</ul>
+<h4 id="example-axios-interceptor-for-token-expiry">Example: Axios Interceptor for Token Expiry</h4>
+<pre><code class="language-typescript"><span class="hljs-comment">// filepath: src/modules/auth/core/AuthHelpers.ts</span>
+<span class="hljs-keyword">import</span> axios <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;axios&#x27;</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">setupAxios</span>(<span class="hljs-params">axios: <span class="hljs-built_in">any</span></span>) {
+  <span class="hljs-comment">// ...existing code...</span>
+  axios.<span class="hljs-property">interceptors</span>.<span class="hljs-property">response</span>.<span class="hljs-title function_">use</span>(
+    <span class="hljs-function">(<span class="hljs-params">response: <span class="hljs-built_in">any</span></span>) =&gt;</span> response,
+    <span class="hljs-keyword">async</span> (<span class="hljs-attr">error</span>: <span class="hljs-built_in">any</span>) =&gt; {
+      <span class="hljs-keyword">const</span> originalRequest = error.<span class="hljs-property">config</span>;
+      <span class="hljs-keyword">if</span> (error &amp;&amp; error.<span class="hljs-property">response</span> &amp;&amp; error.<span class="hljs-property">response</span>.<span class="hljs-property">status</span> === <span class="hljs-number">401</span> &amp;&amp; !originalRequest.<span class="hljs-property">_retry</span>) {
+        originalRequest.<span class="hljs-property">_retry</span> = <span class="hljs-literal">true</span>;
+        <span class="hljs-keyword">try</span> {
+          <span class="hljs-comment">// Attempt to refresh the token</span>
+          <span class="hljs-keyword">const</span> { id } = <span class="hljs-title function_">getDomain</span>();
+          <span class="hljs-keyword">const</span> { refresh_token = <span class="hljs-string">&#x27;&#x27;</span> } = <span class="hljs-title function_">getAuth</span>() || {};
+          <span class="hljs-keyword">const</span> newAuth = <span class="hljs-keyword">await</span> <span class="hljs-title function_">refresh</span>(refresh_token, id);
+          <span class="hljs-title function_">setAuth</span>(newAuth);
+          <span class="hljs-comment">// Retry the original request with the new token</span>
+          originalRequest.<span class="hljs-property">headers</span>.<span class="hljs-property">Authorization</span> = <span class="hljs-string">`Bearer <span class="hljs-subst">${newAuth.access_token}</span>`</span>;
+          <span class="hljs-keyword">return</span> <span class="hljs-title function_">axios</span>(originalRequest);
+        } <span class="hljs-keyword">catch</span> (refreshError) {
+          <span class="hljs-comment">// If refresh fails, log out the user</span>
+          <span class="hljs-title function_">logout</span>();
+        }
+      }
+      <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(error);
+    }
+  );
+}
+</code></pre>
+<ul>
+<li><strong>Session Expiry Handling</strong>: When both access and refresh tokens are expired, the application clears authentication state, removes tokens from storage, and redirects the user to the login page.</li>
+</ul>
+<h4 id="user-experience">User Experience</h4>
+<ul>
+<li><strong>Seamless Renewal</strong>: If the refresh succeeds, the user continues without interruption.</li>
+<li><strong>Session Timeout</strong>: If the refresh fails, the user is logged out and must log in again, ensuring security.</li>
+</ul>
 <h2 id="performance-optimization-techniques">Performance Optimization Techniques</h2>
 <ul>
 <li><strong>Memoization</strong>: <code>React.memo</code> and <code>useMemo</code> are used to prevent unnecessary re-renders of heavy components.</li>
@@ -624,7 +686,10 @@ History --&gt;|Charts/Alerts| Auth
 <p>A visual interface providing an overview of data through customizable widgets, including graphs, pie charts, and line graphs. It enables real-time sensor data visualization, with sensor selection based on associated assets and devices.</p>
 </li>
 <li>
-<p>Dashboard creation: Allows users to create personalized dashboards tailored to their needs.</p>
+<p><strong>Charts are implemented using <a href="https://apexcharts.com/docs/react-charts/">ApexCharts</a> for interactive data visualization.</strong></p>
+</li>
+<li>
+<p>Dashboard creation: Allows users to create personalized dashboards tailored to their needs. A selected dashboard that shows one or more widgets and manages the layout of the dashboard.</p>
 </li>
 <li>
 <p><img src="file:///d:\Development\RapidApp\ClientApp\docs\image-4.png" alt="alt text"></p>

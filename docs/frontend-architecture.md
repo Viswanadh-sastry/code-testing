@@ -22,6 +22,8 @@ This document outlines the frontend architecture of the Honeycomb Front End Appl
   - Enables declarative, nested, and dynamic routing, supporting route guards and lazy loading.
 - **Code Quality**: ESLint
   - Enforces code style and best practices, integrated with Prettier for formatting.
+- **Charting Library**: ApexCharts
+  - ApexCharts is used for rendering interactive charts and data visualizations in the dashboard and analytics widgets.
 
 ## Routing Flow
 
@@ -170,6 +172,63 @@ export function setupAxios(axios: any) {
   );
 }
 ```
+
+## Token Expiry Management and UI Handling
+
+### Token Expiry Management
+
+- **Short-lived Access Tokens**: The application uses short-lived access tokens for API calls. When an access token expires, a refresh token is used to obtain a new access token without requiring the user to re-authenticate.
+- **Refresh Token Rotation**: Each time a refresh token is used, a new refresh token is issued and stored, reducing the risk of replay attacks.
+- **Silent Refresh**: The frontend automatically attempts to renew tokens before expiry using a silent refresh mechanism, ensuring a seamless user experience.
+
+### UI Handling of Token Expiration
+
+- **Axios Interceptors**: All HTTP requests are made through a shared Axios instance configured with interceptors.
+  - **Request Interceptor**: Injects the current access token into the `Authorization` header of each request.
+  - **Response Interceptor**: Intercepts `401 Unauthorized` responses. If a request fails due to an expired token and hasn't already been retried, the interceptor attempts to refresh the token and retry the original request.
+- **Automatic Logout**: If the refresh token is also expired or invalid, the user is automatically logged out and redirected to the login page.
+- **User Feedback**: When a session expires, the UI may display a notification or modal indicating that the session has ended and prompting the user to log in again.
+
+#### Example: Axios Interceptor for Token Expiry
+
+```typescript
+// filepath: src/modules/auth/core/AuthHelpers.ts
+import axios from 'axios';
+
+export function setupAxios(axios: any) {
+  // ...existing code...
+  axios.interceptors.response.use(
+    (response: any) => response,
+    async (error: any) => {
+      const originalRequest = error.config;
+      if (error && error.response && error.response.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          // Attempt to refresh the token
+          const { id } = getDomain();
+          const { refresh_token = '' } = getAuth() || {};
+          const newAuth = await refresh(refresh_token, id);
+          setAuth(newAuth);
+          // Retry the original request with the new token
+          originalRequest.headers.Authorization = `Bearer ${newAuth.access_token}`;
+          return axios(originalRequest);
+        } catch (refreshError) {
+          // If refresh fails, log out the user
+          logout();
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+}
+```
+
+- **Session Expiry Handling**: When both access and refresh tokens are expired, the application clears authentication state, removes tokens from storage, and redirects the user to the login page.
+
+#### User Experience
+
+- **Seamless Renewal**: If the refresh succeeds, the user continues without interruption.
+- **Session Timeout**: If the refresh fails, the user is logged out and must log in again, ensuring security.
 
 ## Performance Optimization Techniques
 
@@ -518,7 +577,8 @@ The following sections outline the key features and functionalities of the appli
 3. **Dashboard (`dashboard/`)**
    - A visual interface providing an overview of data through customizable widgets, including graphs, pie charts, and line graphs. It enables real-time sensor data visualization, with sensor selection based on associated assets and devices.
 
-   - Dashboard creation: Allows users to create personalized dashboards tailored to their needs.
+   - **Charts are implemented using [ApexCharts](https://apexcharts.com/docs/react-charts/) for interactive data visualization.**
+   - Dashboard creation: Allows users to create personalized dashboards tailored to their needs. A selected dashboard that shows one or more widgets and manages the layout of the dashboard.
    - ![alt text](image-4.png)
    - Widget configuration: Users can add, remove, and configure widgets to display specific data points.
    - ![alt text](image-44.png)

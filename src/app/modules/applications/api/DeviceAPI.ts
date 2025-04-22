@@ -2,6 +2,7 @@ import axios from "axios";
 import { getLORAAuth } from "../../auth/core/LORAHelpers";
 
 const API_URL = import.meta.env.VITE_APP_LORA_API_URL;
+const API_DOWNLINK_URL = import.meta.env.VITE_APP_DOWNLINK_API_URL;
 
 export async function addDevice(data: any) {
     const response = await axios.post(`${API_URL}/devices`, data, {
@@ -77,65 +78,37 @@ export async function deleteKeysById(id: string) {
 }
 
 export async function resetKeyRotation() {
-    const response = await axios.post(`${API_URL}/downlink/reset-keyrotation`, {}, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/reset-keyrotation`, {});
     return response.data;
 }
 
 export async function updateFrequency(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/update-frequency`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/update-frequency`, data);
     return response.data;
 }
 
 export async function rebootDevice(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/device-reboot`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/device-reboot`, data);
     return response.data;
 }
 
 export async function deviceStatus(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/device-status`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/device-status`, data);
     return response.data;
 }
 
 export async function logLevel(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/log-level`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/log-level`, data);
     return response.data;
 }
 
 export async function syncTime(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/time-sync`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/time-sync`, data);
     return response.data;
 }
 
 export async function resetDevice(data: any) {
-    const response = await axios.post(`${API_URL}/downlink/reset-device`, data, {
-        headers: {
-            'Grpc-Metadata-Authorization': `Bearer ${getLORAAuth()?.access_token}`,
-        }
-    });
+    const response = await axios.post(`${API_DOWNLINK_URL}/downlink/reset-device`, data);
     return response.data;
 }
 
