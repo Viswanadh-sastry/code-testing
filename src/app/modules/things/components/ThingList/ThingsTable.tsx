@@ -10,7 +10,6 @@ import { Thing } from "../../api/_models";
 import { AddThing } from "../AddEditThing/AddThing";
 import { ImportThings } from "../AddEditThing/ImportThings/ImportThings";
 import { ThingsListHeader } from "./ThingsListHeader";
-import { CustomHeaderColumn } from "./columns/CustomHeaderColumn";
 import { CustomRow } from "./columns/CustomRow";
 import { thingsColumns } from "./columns/_columns";
 import { ThingsListLoading } from "./pagination/ThingsListLoading";
@@ -19,6 +18,8 @@ import { ThingsListPagination } from "./pagination/ThingsListPagination";
 const ThingsTable = () => {
   const [showAddThing, setShowAddThing] = useState(false);
   const [importModal, setImportModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+
   const filterChannel = {
     limit: 10,
     offset: 0,
@@ -47,56 +48,14 @@ const ThingsTable = () => {
             response.things.map(async (thing: any) => {
               try {
                 const channel = await getThingChannelList(thing.id, filterChannel).catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
-                const historyData = await Promise.all(
-                  channel.groups.map(async (group: any) => {
-                    try {
-                      const filterHistory = {
-                        limit: 10,
-                        offset: 0,
-                        name: "",
-                        publisher: thing.id,
-                        status: "enabled",
-                      };
-                      const history = await getHistoryList(group.id, filterHistory).catch((error) => toast.error(error?.response?.data?.message || "Something went wrong"));
-                      return history;
-                    } catch (error) {
-                      return [];
-                    }
-                  })
-                );
-
-                const flatHistory: any = historyData.flat().sort((a: any, b: any) => a.time - b.time);
-
-                // Convert current time to Unix timestamp
-                const now = Number(String(new Date().getTime()).slice(0, 10));
-
-                // Calculate activity status
-                let activity = "inactive";
-
-                if (thing.metadata?.Update_Frequency) {
-                  const updateFrequency = parseInt(thing.metadata.Update_Frequency);
-
-                  if (flatHistory.length > 0 && flatHistory[0].messages?.length > 0) {
-                    const firstRecordTime = Number(String(flatHistory[0].messages[0].time).slice(0, 10));
-                    const timeDifference = now - firstRecordTime;
-                    if (timeDifference >= 0 && timeDifference <= updateFrequency) {
-                      activity = "active";
-                    }
-                  }
-                }
-
                 return {
                   ...thing,
                   isConnected: channel.total > 0,
-                  activity,
-                  lastSeenMsg: flatHistory.length > 0 && flatHistory[0].messages?.length > 0 && flatHistory[0].messages[0].time ? flatHistory[0].messages[0].time : null,
                 };
               } catch (error) {
                 return {
                   ...thing,
                   isConnected: false,
-                  activity: "inactive",
-                  lastSeenMsg: null,
                 };
               }
             })
@@ -108,24 +67,42 @@ const ThingsTable = () => {
   });
 
   const isLoading = thingListQuery.isLoading;
-  const data = useMemo(() => thingListQuery.data?.things || [], [thingListQuery.data]);
+  const rawData = useMemo(() => thingListQuery.data?.things || [], [thingListQuery.data]);
+
+  const sortedData = useMemo(() => {
+    if (!sortConfig) return rawData;
+    return [...rawData].sort((a, b) => {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return sortConfig.direction === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      return 0;
+    });
+  }, [rawData, sortConfig]);
+
   const columns = useMemo(() => thingsColumns, []);
   const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
     columns,
-    data,
+    data: sortedData,
   });
 
-  const onShowAddThing = () => {
-    setShowAddThing(true);
+  const handleSort = (key: string) => {
+    if (!key) return;
+    setSortConfig((prev) => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { key, direction: "asc" };
+    });
   };
 
-  const onCloseAddThing = () => {
-    setShowAddThing(false);
-  };
-
-  const onGetThingList = () => {
-    thingListQuery.refetch();
-  };
+  const onShowAddThing = () => setShowAddThing(true);
+  const onCloseAddThing = () => setShowAddThing(false);
+  const onGetThingList = () => thingListQuery.refetch();
 
   return (
     <KTCard>
@@ -133,13 +110,21 @@ const ThingsTable = () => {
       <KTCardBody className="py-4">
         <div className="table-responsive">
           <table id="kt_table_things" className="table align-middle table-row-dashed fs-6 dataTable no-footer" {...getTableProps()}>
-            <thead>
-              <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
-                {headers.map((column: ColumnInstance<Thing>) => (
-                  <CustomHeaderColumn key={column.id} column={column} />
-                ))}
-              </tr>
-            </thead>
+          <thead>
+  <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
+    {headers.map((column: ColumnInstance<Thing>) => (
+      <th
+        {...column.getHeaderProps()}
+        style={{ cursor: "pointer" }}
+        onClick={() => handleSort(column.id)}
+      >
+        {column.render("Header")}
+        {sortConfig?.key === column.id && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+      </th>
+    ))}
+  </tr>
+</thead>
+
             <tbody className="text-gray-600" {...getTableBodyProps()}>
               {rows.length > 0 ? (
                 rows.map((row: Row<Thing>, i) => {
