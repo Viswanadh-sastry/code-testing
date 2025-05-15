@@ -15,7 +15,7 @@ import { CustomRow } from "./columns/CustomRow";
 import { channelsColumns } from "./columns/_columns";
 import { ChannelsListLoading } from "./pagination/ChannelsListLoading";
 import { ChannelsListPagination } from "./pagination/ChannelsListPagination";
-
+import { useTableSort } from "../../../../hooks/useTableSort"; // reusable hook
 const ChannelsTable = () => {
   const [showAddChannel, setShowAddChannel] = useState(false);
   const [importModal, setImportModal] = useState(false);
@@ -26,6 +26,7 @@ const ChannelsTable = () => {
     metadata: "",
     status: "enabled",
   });
+
   const filterThing = {
     limit: 10,
     offset: 0,
@@ -34,6 +35,7 @@ const ChannelsTable = () => {
     tags: "",
     status: "enabled",
   };
+
   const filterGroup = {
     limit: 10,
     offset: 0,
@@ -42,6 +44,7 @@ const ChannelsTable = () => {
     parentID: "",
     status: "enabled",
   };
+
   const channelListQuery = useQuery({
     queryKey: [`channelList`, filterChannel],
     queryFn: async () =>
@@ -73,37 +76,51 @@ const ChannelsTable = () => {
   });
 
   const isLoading = channelListQuery.isLoading;
-  const data = useMemo(() => channelListQuery.data?.groups || [], [channelListQuery.data]);
+  const rawData = useMemo(() => channelListQuery.data?.groups || [], [channelListQuery.data]);
+  
+  //  Added sorting hook
+  const { sortConfig, sortedData, handleSort } = useTableSort<Channels>(rawData);
+
   const columns = useMemo(() => channelsColumns, []);
+
   const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
     columns,
-    data,
+    data: sortedData, // Use sortedData instead of raw data
   });
 
-  const onShowAddChannel = () => {
-    setShowAddChannel(true);
-  };
-
-  const onCloseAddChannel = () => {
-    setShowAddChannel(false);
-  };
-
-  const onGetChannelList = () => {
-    channelListQuery.refetch();
-  };
+  const onShowAddChannel = () => setShowAddChannel(true);
+  const onCloseAddChannel = () => setShowAddChannel(false);
+  const onGetChannelList = () => channelListQuery.refetch();
   const onShowImportChannel = () => setImportModal(true);
   const onCloseImportChannel = () => setImportModal(false);
 
   return (
     <KTCard>
-      <ChannelsListHeader onShowAddChannel={onShowAddChannel} onShowImportChannel={onShowImportChannel} setFilterChannel={setFilterChannel} filterChannel={filterChannel} />
+      <ChannelsListHeader
+        onShowAddChannel={onShowAddChannel}
+        onShowImportChannel={onShowImportChannel}
+        setFilterChannel={setFilterChannel}
+        filterChannel={filterChannel}
+      />
       <KTCardBody className="py-4">
         <div className="table-responsive">
-          <table id="kt_table_channels" className="table align-middle table-row-dashed fs-6 dataTable no-footer" {...getTableProps()}>
+          <table
+            id="kt_table_channels"
+            className="table align-middle table-row-dashed fs-6 dataTable no-footer"
+            {...getTableProps()}
+          >
             <thead>
               <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
                 {headers.map((column: ColumnInstance<Channels>) => (
-                  <CustomHeaderColumn key={column.id} column={column} />
+                  <th
+                    key={column.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleSort(column.id as keyof Channels)} //  Hook added
+                  >
+                    {column.render("Header")}
+                    {sortConfig?.key === column.id &&
+                      (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -116,7 +133,9 @@ const ChannelsTable = () => {
               ) : (
                 <tr>
                   <td colSpan={7}>
-                    <div className="d-flex text-center w-100 align-content-center justify-content-center">No matching records found</div>
+                    <div className="d-flex text-center w-100 align-content-center justify-content-center">
+                      No matching records found
+                    </div>
                   </td>
                 </tr>
               )}
@@ -124,8 +143,19 @@ const ChannelsTable = () => {
           </table>
         </div>
         <ChannelsListPagination filterChannel={filterChannel} setFilterChannel={setFilterChannel} />
-        {showAddChannel && <AddChannels onCloseAddChannel={onCloseAddChannel} onGetChannelList={onGetChannelList} />}
-        {importModal && <ImportChannel onShowImportChannel={importModal} onCloseImportChannel={onCloseImportChannel} onGetChannelList={onGetChannelList} />}
+        {showAddChannel && (
+          <AddChannels
+            onCloseAddChannel={onCloseAddChannel}
+            onGetChannelList={onGetChannelList}
+          />
+        )}
+        {importModal && (
+          <ImportChannel
+            onShowImportChannel={importModal} // 
+            onCloseImportChannel={onCloseImportChannel}
+            onGetChannelList={onGetChannelList}
+          />
+        )}
         {isLoading && <ChannelsListLoading />}
       </KTCardBody>
     </KTCard>

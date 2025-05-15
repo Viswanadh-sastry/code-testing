@@ -13,6 +13,7 @@ import { CustomRow } from "./columns/CustomRow";
 import { groupColumns } from "./columns/_columns";
 import { GroupsListLoading } from "./pagination/GroupsListLoading";
 import { GroupsListPagination } from "./pagination/GroupsListPagination";
+import { useTableSort } from "../../../../hooks/useTableSort"; // sorting hook
 
 const GroupTable: FC = () => {
   const [showAddGroup, setShowAddGroup] = useState(false);
@@ -30,16 +31,22 @@ const GroupTable: FC = () => {
 
   const groupListQuery = useQuery({
     queryKey: [`groupList`, filterGroup],
-    queryFn: async () => getGroupList(filterGroup).catch((error) => toast.error(error?.response?.data?.message || "Something went wrong")),
+    queryFn: async () =>
+      getGroupList(filterGroup).catch((error) => toast.error(error?.response?.data?.message || "Something went wrong")),
     enabled: true,
   });
 
   const isLoading = groupListQuery.isLoading;
-  const data = useMemo(() => groupListQuery.data?.groups || [], [groupListQuery.data]);
+  const rawData = useMemo(() => groupListQuery.data?.groups || [], [groupListQuery.data]);
+
+  //  Apply sorting hook on rawData
+  const { sortConfig, sortedData, handleSort } = useTableSort<Group>(rawData);
+
   const columns = useMemo(() => groupColumns, []);
+
   const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
     columns,
-    data,
+    data: sortedData, //  Use sortedData instead of rawData
   });
 
   const onShowAddGroup = () => setShowAddGroup(true);
@@ -57,14 +64,31 @@ const GroupTable: FC = () => {
 
   return (
     <KTCard>
-      <GroupListHeader onShowAddGroup={onShowAddGroup} onShowImportGroup={onShowImportGroup} setFilterGroup={setFilterGroup} filterGroup={filterGroup} />
+      <GroupListHeader
+        onShowAddGroup={onShowAddGroup}
+        onShowImportGroup={onShowImportGroup}
+        setFilterGroup={setFilterGroup}
+        filterGroup={filterGroup}
+      />
       <KTCardBody className="py-4">
         <div className="table-responsive">
-          <table id="kt_table_groups" className="table align-middle table-row-dashed fs-6 dataTable no-footer" {...getTableProps()}>
+          <table
+            id="kt_table_groups"
+            className="table align-middle table-row-dashed fs-6 dataTable no-footer"
+            {...getTableProps()}
+          >
             <thead>
               <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
                 {headers.map((column: ColumnInstance<Group>) => (
-                  <CustomHeaderColumn key={column.id} column={column} />
+                  <th
+                    key={column.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleSort(column.id as keyof Group)} // Enable sorting click
+                  >
+                    {column.render("Header")}
+                    {sortConfig?.key === column.id &&
+                      (sortConfig.direction === "asc" ? " ▲" : " ▼")} 
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -72,12 +96,21 @@ const GroupTable: FC = () => {
               {rows.length > 0 ? (
                 rows.map((row: Row<Group>, i) => {
                   prepareRow(row);
-                  return <CustomRow key={`row-${i}-${row.id}`} row={row} onRowClick={onRowClick} isExpanded={!expandedRows[row.id]} />;
+                  return (
+                    <CustomRow
+                      key={`row-${i}-${row.id}`}
+                      row={row}
+                      onRowClick={onRowClick}
+                      isExpanded={!expandedRows[row.id]}
+                    />
+                  );
                 })
               ) : (
                 <tr>
                   <td colSpan={7}>
-                    <div className="d-flex text-center w-100 align-content-center justify-content-center">No matching records found</div>
+                    <div className="d-flex text-center w-100 align-content-center justify-content-center">
+                      No matching records found
+                    </div>
                   </td>
                 </tr>
               )}
@@ -86,7 +119,13 @@ const GroupTable: FC = () => {
         </div>
         <GroupsListPagination filterGroup={filterGroup} setFilterGroup={setFilterGroup} />
         {showAddGroup && <AddGroup onCloseAddGroup={onCloseAddGroup} onGetGroupList={onGetGroupList} />}
-        {importModal && <ImportGroup onShowImportGroup={importModal} onCloseImportGroup={onCloseImportGroup} onGetGroupList={onGetGroupList} />}
+        {importModal && (
+          <ImportGroup
+            onShowImportGroup={importModal} // 
+            onCloseImportGroup={onCloseImportGroup}
+            onGetGroupList={onGetGroupList}
+          />
+        )}
         {isLoading && <GroupsListLoading />}
       </KTCardBody>
     </KTCard>
