@@ -14,20 +14,19 @@ import { CustomRow } from "./columns/CustomRow";
 import { thingsColumns } from "./columns/_columns";
 import { ThingsListLoading } from "./pagination/ThingsListLoading";
 import { ThingsListPagination } from "./pagination/ThingsListPagination";
-import { useTableSort } from "../../../../hooks/useTableSort";
 
 const ThingsTable = () => {
   const [showAddThing, setShowAddThing] = useState(false);
   const [importModal, setImportModal] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
-  const [filterThing, setFilterThing] = useState({
-    limit: 10,
-    offset: 0,
-    name: "",
-    metadata: "",
-    tags: "",
-    status: "enabled",
-  });
+  // ✅ filterThing holds the sortBy field for backend sorting
+ const [filterThing, setFilterThing] = useState({
+  limit: 20,
+  status: "enabled",
+  sort_by: "created_at_desc", // ✅ backend sort key
+});
+
 
   const filterChannel = {
     limit: 10,
@@ -37,8 +36,16 @@ const ThingsTable = () => {
     status: "enabled",
   };
 
+  const handleSortChange = (sortValue: string) => {
+    setFilterThing((prev) => ({
+      ...prev,
+      sort_by: sortValue,
+    }));
+    setShowSortMenu(false);
+  };
+
   const thingListQuery = useQuery({
-    queryKey: [`thingList`, filterThing],
+    queryKey: [`thingList`, filterThing], // ✅ triggers refetch on sort/filter
     queryFn: async () =>
       getThingList(filterThing)
         .then(async (response) => {
@@ -48,6 +55,7 @@ const ThingsTable = () => {
                 const channel = await getThingChannelList(thing.id, filterChannel).catch((error) =>
                   toast.error(error?.response?.data?.message || "Something went wrong")
                 );
+
                 const historyData = await Promise.all(
                   channel.groups.map(async (group: any) => {
                     try {
@@ -69,7 +77,6 @@ const ThingsTable = () => {
                 );
 
                 const flatHistory: any = historyData.flat().sort((a: any, b: any) => a.time - b.time);
-
                 const now = Number(String(new Date().getTime()).slice(0, 10));
                 let activity = "inactive";
 
@@ -111,14 +118,11 @@ const ThingsTable = () => {
     enabled: true,
   });
 
-  const isLoading = thingListQuery.isLoading;
-  const rawData = useMemo(() => thingListQuery.data?.things || [], [thingListQuery.data]);
-  const { sortConfig, sortedData, handleSort } = useTableSort<Thing>(rawData);
-
+  const data = useMemo(() => thingListQuery.data?.things || [], [thingListQuery.data]);
   const columns = useMemo(() => thingsColumns, []);
   const { getTableProps, getTableBodyProps, headers, rows, prepareRow } = useTable({
     columns,
-    data: sortedData,
+    data,
   });
 
   return (
@@ -129,6 +133,7 @@ const ThingsTable = () => {
         setFilterThing={setFilterThing}
         filterThing={filterThing}
       />
+
       <KTCardBody className="py-4">
         <div className="table-responsive">
           <table
@@ -139,15 +144,7 @@ const ThingsTable = () => {
             <thead>
               <tr className="text-start text-muted fw-bolder fs-7 text-uppercase gs-0">
                 {headers.map((column: ColumnInstance<Thing>) => (
-                  <th
-                    key={column.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => handleSort(column.id as keyof Thing)}
-                  >
-                    {column.render("Header")}
-                    {sortConfig?.key === column.id &&
-                      (sortConfig.direction === "asc" ? " ▲" : " ▼")}
-                  </th>
+                  <th key={column.id}>{column.render("Header")}</th>
                 ))}
               </tr>
             </thead>
@@ -169,7 +166,9 @@ const ThingsTable = () => {
             </tbody>
           </table>
         </div>
+
         <ThingsListPagination filterThing={filterThing} setFilterThing={setFilterThing} />
+
         {showAddThing && (
           <AddThing
             onCloseAddThing={() => setShowAddThing(false)}
@@ -180,10 +179,10 @@ const ThingsTable = () => {
           <ImportThings
             onCloseImportThing={() => setImportModal(false)}
             onGetThingList={() => thingListQuery.refetch()}
-            onShowImportThing={importModal} 
+            onShowImportThing={importModal}
           />
         )}
-        {isLoading && <ThingsListLoading />}
+        {thingListQuery.isLoading && <ThingsListLoading />}
       </KTCardBody>
     </KTCard>
   );

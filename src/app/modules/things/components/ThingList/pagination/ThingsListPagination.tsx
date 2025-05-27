@@ -22,11 +22,8 @@ interface IThingsListPaginationProps {
   setFilterThing: Dispatch<
     SetStateAction<{
       limit: number;
-      offset: number;
-      name: string;
-      metadata: string;
-      tags: string;
       status: string;
+      sort_by: string;
     }>
   >;
 }
